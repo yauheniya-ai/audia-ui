@@ -6,6 +6,17 @@ import React, {
 } from "react";
 import { Icon } from "@iconify/react";
 import type { AudioEntry, ConvertResult, LivePreview, Theme } from "../App";
+import {
+  PROVIDERS,
+  PROVIDER_ICONS,
+  PROVIDER_MODELS,
+  STT_MODELS,
+  TTS_BACKENDS,
+} from "../constants";
+import type { LLMProvider } from "../constants";
+import arxivLogo   from "../assets/arxiv.svg";
+import systranLogo from "../assets/systran.svg";
+import hexgradLogo from "../assets/hexgrad.webp";
 
 interface MainProps {
   theme: Theme;
@@ -49,21 +60,7 @@ const RESEARCH_STAGES = [
 
 type Tab = "configuration" | "convert" | "research";
 
-// ────────────────────────────────── Configuration constants
-
-type LLMProvider = "Anthropic" | "OpenAI" | "Google" | "Mistral";
-
-const LLM_PROVIDERS: LLMProvider[] = ["Anthropic", "OpenAI", "Google", "Mistral"];
-
-const LLM_MODELS: Record<LLMProvider, string[]> = {
-  Anthropic: ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-3-5"],
-  OpenAI: ["gpt-4o", "gpt-4o-mini", "o1", "o3-mini"],
-  Google: ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-1.5-pro"],
-  Mistral: ["mistral-large", "mistral-small"],
-};
-
-const STT_MODELS = ["whisper-large-v3", "whisper-medium", "whisper-small"];
-const TTS_MODELS = ["edge-tts", "coqui-xtts", "piper", "kokoro"];
+// ────────────────────────────────── Diagram helpers
 
 const ROSE_HEX = "#f43f5e";
 const LIME_HEX = "#84cc16";
@@ -79,34 +76,107 @@ function getRelRect(el: HTMLElement, container: HTMLElement): CardRectData {
 }
 const btmC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y + r.h });
 const topC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y });
-const rtC  = (r: CardRectData) => ({ x: r.x + r.w, y: r.y + r.h / 2 });
-const pts  = (...ps: Array<{ x: number; y: number }>) => ps.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
+const rgtC = (r: CardRectData) => ({ x: r.x + r.w, y: r.y + r.h / 2 });
+const pts  = (...ps: Array<{ x: number; y: number }>) =>
+  ps.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(" ");
+
+// ────────────────────────────────── CustomSelect
+
+function CustomSelect({
+  value,
+  options,
+  onChange,
+  isDark,
+  accent = "rose",
+}: {
+  value: string;
+  options: readonly string[] | string[];
+  onChange: (v: string) => void;
+  isDark: boolean;
+  accent?: "lime" | "rose";
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const accentBorder  = accent === "lime" ? "border-lime-500/40"  : "border-rose-500/40";
+  const accentHoverBorder = accent === "lime" ? "hover:border-lime-500/70" : "hover:border-rose-500/70";
+  const accentSelBg   = accent === "lime" ? "bg-lime-950" : "bg-rose-950";
+  const accentSelTxt  = accent === "lime" ? "text-lime-400"  : "text-rose-400";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-1 rounded border px-2 py-1.5 text-xs transition-colors
+          ${isDark ? "bg-transparent text-white" : "bg-transparent text-black"}
+          ${accentBorder} ${accentHoverBorder}`}
+      >
+        <span className="truncate">{value}</span>
+        <Icon
+          icon={open ? "mdi:chevron-up" : "mdi:chevron-down"}
+          className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-white/30" : "text-black/30"}`}
+        />
+      </button>
+      {open && (
+        <div
+          className={`absolute z-50 top-full left-0 right-0 mt-1 rounded border shadow-lg overflow-hidden ${
+            isDark ? "bg-zinc-900 border-white/10" : "bg-white border-black/10"
+          }`}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full text-left px-2.5 py-1.5 text-xs transition-colors ${
+                opt === value
+                  ? `${accentSelBg} ${accentSelTxt} font-medium`
+                  : isDark
+                  ? `text-white/70 hover:bg-zinc-800`
+                  : `text-black/70 hover:bg-gray-100`
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ────────────────────────────────── ConfigurationPanel
 
 function ConfigurationPanel({ theme }: { theme: Theme }) {
-  const isDark = theme === "dark";
-  const cardBg  = isDark ? "bg-zinc-900/80" : "bg-white";
+  const isDark  = theme === "dark";
+  const cardBg  = isDark ? "bg-zinc-900/90" : "bg-white";
   const dimText = isDark ? "text-white/40"  : "text-black/40";
-  const selectCls = `rounded border px-2 py-1.5 text-xs w-full ${
-    isDark ? "bg-zinc-800 border-white/10 text-white" : "bg-gray-50 border-black/10 text-black"
-  }`;
 
-  const [sttModel,     setSttModel]     = useState(STT_MODELS[0]);
-  const [llm1Provider, setLlm1Provider] = useState<LLMProvider>("Anthropic");
-  const [llm1Model,    setLlm1Model]    = useState(LLM_MODELS["Anthropic"][0]);
-  const [llm2Provider, setLlm2Provider] = useState<LLMProvider>("Anthropic");
-  const [llm2Model,    setLlm2Model]    = useState(LLM_MODELS["Anthropic"][0]);
-  const [ttsModel,     setTtsModel]     = useState(TTS_MODELS[0]);
+  const [sttModel,     setSttModel]     = useState<string>(STT_MODELS[0]);
+  const [llm1Provider, setLlm1Provider] = useState<LLMProvider>(PROVIDERS[0]);
+  const [llm1Model,    setLlm1Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
+  const [llm2Provider, setLlm2Provider] = useState<LLMProvider>(PROVIDERS[0]);
+  const [llm2Model,    setLlm2Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
+  const [ttsBackend,   setTtsBackend]   = useState<string>(TTS_BACKENDS[0]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const sttRef  = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const pdfRef  = useRef<HTMLDivElement>(null);
-  const llm1Ref = useRef<HTMLDivElement>(null);
-  const prepRef = useRef<HTMLDivElement>(null);
-  const llm2Ref = useRef<HTMLDivElement>(null);
-  const ttsRef  = useRef<HTMLDivElement>(null);
+  const sttRef   = useRef<HTMLDivElement>(null);
+  const textRef  = useRef<HTMLDivElement>(null);
+  const arxivRef = useRef<HTMLDivElement>(null);
+  const pdfRef   = useRef<HTMLDivElement>(null);
+  const llm1Ref  = useRef<HTMLDivElement>(null);
+  const prepRef  = useRef<HTMLDivElement>(null);
+  const llm2Ref  = useRef<HTMLDivElement>(null);
+  const ttsRef   = useRef<HTMLDivElement>(null);
 
   const [lines, setLines] = useState<DiagramLine[]>([]);
   const [rects, setRects] = useState<DiagramRect[]>([]);
@@ -114,31 +184,38 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
   const updateDiagram = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const allRefs = [sttRef, textRef, pdfRef, llm1Ref, prepRef, llm2Ref, ttsRef];
-    if (allRefs.some(r => !r.current)) return;
+    if ([sttRef, textRef, arxivRef, pdfRef, llm1Ref, prepRef, llm2Ref, ttsRef].some(r => !r.current)) return;
 
-    const sttR  = getRelRect(sttRef.current!,  container);
-    const textR = getRelRect(textRef.current!, container);
-    const pdfR  = getRelRect(pdfRef.current!,  container);
-    const llm1R = getRelRect(llm1Ref.current!, container);
-    const prepR = getRelRect(prepRef.current!, container);
-    const llm2R = getRelRect(llm2Ref.current!, container);
-    const ttsR  = getRelRect(ttsRef.current!,  container);
+    const sttR   = getRelRect(sttRef.current!,   container);
+    const textR  = getRelRect(textRef.current!,  container);
+    const arxivR = getRelRect(arxivRef.current!, container);
+    const pdfR   = getRelRect(pdfRef.current!,   container);
+    const llm1R  = getRelRect(llm1Ref.current!,  container);
+    const prepR  = getRelRect(prepRef.current!,  container);
+    const llm2R  = getRelRect(llm2Ref.current!,  container);
+    const ttsR   = getRelRect(ttsRef.current!,   container);
 
-    const gap = 18;
+    const sttB   = btmC(sttR);
+    const txtB   = btmC(textR);
+    const llm1T  = topC(llm1R);
+    const llm1B  = btmC(llm1R);
+    const arxivT = topC(arxivR);
+    const arxivB = btmC(arxivR);
+    const pdfB   = btmC(pdfR);
 
-    // STT → LLM1 (elbow)
-    const sttB  = btmC(sttR);
-    const llm1T = topC(llm1R);
+    // STT + Text elbow into LLM1 top
     const midY1 = sttB.y + (llm1T.y - sttB.y) / 2;
 
-    // Text → LLM1 (elbow)
-    const txtB = btmC(textR);
+    // LLM1 bottom → ArXiv top  (LLM spans cols 2-3, ArXiv is at col 2)
+    const midY2 = llm1B.y + (arxivT.y - llm1B.y) / 2;
 
-    // PDF → Preprocessing (right-side entry)
-    const pdfB  = btmC(pdfR);
-    const prepRt = rtC(prepR);
-    const rightX = prepRt.x + gap;
+    // ArXiv → Prep top-left area
+    const prepTL = { x: prepR.x + prepR.w * 0.30, y: prepR.y };
+    const midY3  = arxivB.y + (prepTL.y - arxivB.y) / 2;
+
+    // PDF → Prep top-right area
+    const prepTR = { x: prepR.x + prepR.w * 0.70, y: prepR.y };
+    const midY4  = pdfB.y + (prepTR.y - pdfB.y) / 2;
 
     const newLines: DiagramLine[] = [
       {
@@ -149,22 +226,22 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
       {
         id: "txt-llm1",
         color: ROSE_HEX,
-        points: pts(txtB, { x: txtB.x, y: midY1 }, { x: llm1T.x, y: midY1 }, llm1T),
+        points: pts(txtB, { x: txtB.x, y: rgtC(llm1R).y }, rgtC(llm1R)),
       },
       {
-        id: "llm1-prep",
+        id: "llm1-arxiv",
         color: ROSE_HEX,
-        points: pts(btmC(llm1R), topC(prepR)),
+        points: pts(llm1B, { x: llm1B.x, y: midY2 }, { x: arxivT.x, y: midY2 }, arxivT),
+      },
+      {
+        id: "arxiv-prep",
+        color: ROSE_HEX,
+        points: pts(arxivB, { x: arxivB.x, y: midY3 }, { x: prepTL.x, y: midY3 }, prepTL),
       },
       {
         id: "pdf-prep",
         color: ROSE_HEX,
-        points: pts(
-          pdfB,
-          { x: pdfB.x, y: prepRt.y },
-          { x: rightX, y: prepRt.y },
-          prepRt,
-        ),
+        points: pts(pdfB, { x: pdfB.x, y: midY4 }, { x: prepTR.x, y: midY4 }, prepTR),
       },
       {
         id: "prep-llm2",
@@ -179,13 +256,14 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
     ];
 
     const newRects: DiagramRect[] = [
-      { id: "r-stt",  rect: sttR,  color: LIME_HEX },
-      { id: "r-txt",  rect: textR, color: ROSE_HEX },
-      { id: "r-pdf",  rect: pdfR,  color: ROSE_HEX },
-      { id: "r-llm1", rect: llm1R, color: ROSE_HEX },
-      { id: "r-prep", rect: prepR, color: ROSE_HEX },
-      { id: "r-llm2", rect: llm2R, color: ROSE_HEX },
-      { id: "r-tts",  rect: ttsR,  color: LIME_HEX },
+      { id: "r-stt",   rect: sttR,   color: LIME_HEX },
+      { id: "r-txt",   rect: textR,  color: ROSE_HEX },
+      { id: "r-arxiv", rect: arxivR, color: ROSE_HEX },
+      { id: "r-pdf",   rect: pdfR,   color: ROSE_HEX },
+      { id: "r-llm1",  rect: llm1R,  color: ROSE_HEX },
+      { id: "r-prep",  rect: prepR,  color: ROSE_HEX },
+      { id: "r-llm2",  rect: llm2R,  color: ROSE_HEX },
+      { id: "r-tts",   rect: ttsR,   color: LIME_HEX },
     ];
 
     setLines(newLines);
@@ -196,15 +274,12 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
     requestAnimationFrame(() => requestAnimationFrame(updateDiagram));
     const t = setTimeout(updateDiagram, 120);
     window.addEventListener("resize", updateDiagram);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("resize", updateDiagram);
-    };
+    return () => { clearTimeout(t); window.removeEventListener("resize", updateDiagram); };
   }, [updateDiagram]);
 
+  // LLM sub-card — shows provider logo
   const LLMCard = ({
-    label, cardRef, provider, model,
-    onProvider, onModel,
+    label, cardRef, provider, model, onProvider, onModel,
   }: {
     label: string;
     cardRef: React.RefObject<HTMLDivElement | null>;
@@ -215,34 +290,34 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
   }) => (
     <div ref={cardRef} className={`rounded-lg p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
-        <Icon icon="mdi:brain" className="w-4 h-4 text-rose-500" />
+        <Icon icon={PROVIDER_ICONS[provider]} className="w-4 h-4" />
         <span className="text-xs font-semibold">LLM</span>
         <span className={`text-xs ${dimText}`}>{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <p className={`text-xs ${dimText} mb-1`}>Provider</p>
-          <select
-            className={selectCls}
+          <CustomSelect
+            isDark={isDark}
+            accent="rose"
             value={provider}
-            onChange={e => {
-              const p = e.target.value as LLMProvider;
+            options={PROVIDERS}
+            onChange={(v) => {
+              const p = v as LLMProvider;
               onProvider(p);
-              onModel(LLM_MODELS[p][0]);
+              onModel(PROVIDER_MODELS[p][0]);
             }}
-          >
-            {LLM_PROVIDERS.map(p => <option key={p}>{p}</option>)}
-          </select>
+          />
         </div>
         <div>
           <p className={`text-xs ${dimText} mb-1`}>Model</p>
-          <select
-            className={selectCls}
+          <CustomSelect
+            isDark={isDark}
+            accent="rose"
             value={model}
-            onChange={e => onModel(e.target.value)}
-          >
-            {LLM_MODELS[provider].map(m => <option key={m}>{m}</option>)}
-          </select>
+            options={PROVIDER_MODELS[provider]}
+            onChange={onModel}
+          />
         </div>
       </div>
     </div>
@@ -255,21 +330,20 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
       </p>
 
       <div ref={containerRef} className="relative">
-        {/* ── Animated SVG overlay (borders + connectors) ── */}
+        {/* ── Animated SVG overlay ── */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none z-20"
           style={{ overflow: "visible" }}
         >
           <defs>
-            <marker id="arrowRose" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-              <path d="M0,0 L7,3.5 L0,7 Z" fill={ROSE_HEX} opacity="0.85" />
+            <marker id="arrowRose" markerWidth="3.5" markerHeight="3.5" refX="2.5" refY="1.75" orient="auto">
+              <path d="M0,0 L3.5,1.75 L0,3.5 Z" fill={ROSE_HEX} opacity="0.85" />
             </marker>
-            <marker id="arrowLime" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-              <path d="M0,0 L7,3.5 L0,7 Z" fill={LIME_HEX} opacity="0.85" />
+            <marker id="arrowLime" markerWidth="3.5" markerHeight="3.5" refX="2.5" refY="1.75" orient="auto">
+              <path d="M0,0 L3.5,1.75 L0,3.5 Z" fill={LIME_HEX} opacity="0.85" />
             </marker>
           </defs>
 
-          {/* Animated card outlines */}
           {rects.map(({ id, rect, color }) => (
             <rect
               key={id}
@@ -284,17 +358,10 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
               strokeDasharray="5 7"
               strokeLinecap="round"
             >
-              <animate
-                attributeName="stroke-dashoffset"
-                from="48"
-                to="0"
-                dur="2.2s"
-                repeatCount="indefinite"
-              />
+              <animate attributeName="stroke-dashoffset" from="48" to="0" dur="2.2s" repeatCount="indefinite" />
             </rect>
           ))}
 
-          {/* Animated connector lines */}
           {lines.map(({ id, points, color }) => (
             <polyline
               key={id}
@@ -308,69 +375,40 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
               markerEnd={color === ROSE_HEX ? "url(#arrowRose)" : "url(#arrowLime)"}
               opacity="0.75"
             >
-              <animate
-                attributeName="stroke-dashoffset"
-                from="40"
-                to="0"
-                dur="1.8s"
-                repeatCount="indefinite"
-              />
+              <animate attributeName="stroke-dashoffset" from="40" to="0" dur="1.8s" repeatCount="indefinite" />
             </polyline>
           ))}
         </svg>
 
-        {/* ── Cards grid ── */}
+        {/* ── Cards — 4-col grid ── */}
         <div className="grid gap-6 relative z-10">
 
-          {/* Row 1 — Inputs */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* LEFT: STT + Text */}
-            <div className="col-span-2 grid grid-cols-2 gap-4">
-              {/* STT */}
-              <div ref={sttRef} className={`rounded-lg p-4 ${cardBg}`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon icon="mdi:microphone" className="w-4 h-4 text-lime-500" />
-                  <span className="text-xs font-semibold">STT</span>
-                  <span className={`text-xs ${dimText}`}>Speech to Text</span>
-                </div>
-                <p className={`text-xs ${dimText} mb-1`}>Model</p>
-                <select
-                  className={selectCls}
-                  value={sttModel}
-                  onChange={e => setSttModel(e.target.value)}
-                >
-                  {STT_MODELS.map(m => <option key={m}>{m}</option>)}
-                </select>
+          {/* Row 1 — STT + Text: full width, each 50% */}
+          <div className="grid grid-cols-2 gap-4">
+            <div ref={sttRef} className={`rounded-lg p-4 ${cardBg}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <img src={systranLogo} alt="Systran" className="w-4 h-4 object-contain" />
+                <span className="text-xs font-semibold">STT</span>
+                <span className={`text-xs ${dimText}`}>Speech to Text</span>
               </div>
-
-              {/* Text */}
-              <div ref={textRef} className={`rounded-lg p-4 ${cardBg}`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon icon="mdi:text-box-outline" className="w-4 h-4 text-rose-500" />
-                  <span className="text-xs font-semibold">Text</span>
-                  <span className={`text-xs ${dimText}`}>Direct input</span>
-                </div>
-                <p className={`text-xs ${dimText} text-xs leading-relaxed`}>
-                  Paste or type raw text as input to the pipeline.
-                </p>
-              </div>
+              <p className={`text-xs ${dimText} mb-1`}>Model</p>
+              <CustomSelect isDark={isDark} accent="lime" value={sttModel} options={STT_MODELS} onChange={setSttModel} />
             </div>
 
-            {/* RIGHT: PDF */}
-            <div ref={pdfRef} className={`rounded-lg p-4 ${cardBg}`}>
+            <div ref={textRef} className={`rounded-lg p-4 ${cardBg}`}>
               <div className="flex items-center gap-2 mb-3">
-                <Icon icon="bi:file-earmark-pdf-fill" className="w-4 h-4 text-rose-500" />
-                <span className="text-xs font-semibold">PDF</span>
-                <span className={`text-xs ${dimText}`}>Document upload</span>
+                <Icon icon="mdi:text-box-outline" className="w-4 h-4 text-rose-500" />
+                <span className="text-xs font-semibold">Text</span>
+                <span className={`text-xs ${dimText}`}>Direct input</span>
               </div>
               <p className={`text-xs ${dimText} leading-relaxed`}>
-                Upload a PDF — text is extracted automatically and skips the STT/Text LLM step.
+                Paste or type raw text as input to the pipeline.
               </p>
             </div>
           </div>
 
-          {/* Row 2 — LLM 1 (STT / Text path) */}
-          <div className="max-w-xs w-full" style={{ marginLeft: "calc(25% - 3rem)" }}>
+          {/* Row 2 — LLM 1: left-aligned (same column as STT above) */}
+          <div className="grid grid-cols-2 gap-4">
             <LLMCard
               label="Research string normalisation"
               cardRef={llm1Ref}
@@ -379,53 +417,91 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
               onProvider={setLlm1Provider}
               onModel={setLlm1Model}
             />
+            <div />
           </div>
 
-          {/* Row 3 — Preprocessing */}
-          <div className="max-w-xs mx-auto w-full">
-            <div ref={prepRef} className={`rounded-lg p-4 ${cardBg}`}>
+          {/* Row 3 — ArXiv + PDF: full width, each 50% */}
+          <div className="grid grid-cols-2 gap-4">
+            <div ref={arxivRef} className={`rounded-lg p-4 ${cardBg}`}>
               <div className="flex items-center gap-2 mb-2">
-                <Icon icon="mdi:cog-outline" className="w-4 h-4 text-rose-500" />
-                <span className="text-xs font-semibold">Preprocessing</span>
+                <img src={arxivLogo} alt="ArXiv" className="w-4 h-4 object-contain" />
+                <span className="text-xs font-semibold">ArXiv</span>
+                <span className={`text-xs ${dimText}`}>Paper search</span>
               </div>
               <p className={`text-xs ${dimText} leading-relaxed`}>
-                Text cleaning, sentence chunking and normalisation before synthesis.
+                Search and download papers from ArXiv directly.
+              </p>
+            </div>
+
+            <div ref={pdfRef} className={`rounded-lg p-4 ${cardBg}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Icon icon="bi:file-earmark-pdf-fill" className="w-4 h-4 text-rose-500" />
+                <span className="text-xs font-semibold">PDF</span>
+                <span className={`text-xs ${dimText}`}>Document upload</span>
+              </div>
+              <p className={`text-xs ${dimText} leading-relaxed`}>
+                Upload a PDF — text extracted automatically.
               </p>
             </div>
           </div>
 
-          {/* Row 4 — LLM 2 (content curation) */}
-          <div className="max-w-xs mx-auto w-full">
-            <LLMCard
-              label="Content curation"
-              cardRef={llm2Ref}
-              provider={llm2Provider}
-              model={llm2Model}
-              onProvider={setLlm2Provider}
-              onModel={setLlm2Model}
-            />
-          </div>
-
-          {/* Row 5 — TTS */}
-          <div className="max-w-xs mx-auto w-full">
-            <div ref={ttsRef} className={`rounded-lg p-4 ${cardBg}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <Icon icon="mdi:waveform" className="w-4 h-4 text-lime-500" />
-                <span className="text-xs font-semibold">TTS</span>
-                <span className={`text-xs ${dimText}`}>Text to Speech</span>
+          {/* Row 4 — Preprocessing: centered (col1 empty, col-span-2, col4 empty) */}
+          <div className="grid grid-cols-4 gap-4">
+            <div />
+            <div className="col-span-2">
+              <div ref={prepRef} className={`rounded-lg p-4 ${cardBg}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon icon="mdi:cog-outline" className="w-4 h-4 text-rose-500" />
+                  <span className="text-xs font-semibold">Preprocessing</span>
+                </div>
+                <p className={`text-xs ${dimText} leading-relaxed`}>
+                  Text cleaning, sentence chunking and normalisation.
+                </p>
               </div>
-              <p className={`text-xs ${dimText} mb-1`}>Model</p>
-              <select
-                className={selectCls}
-                value={ttsModel}
-                onChange={e => setTtsModel(e.target.value)}
-              >
-                {TTS_MODELS.map(m => <option key={m}>{m}</option>)}
-              </select>
             </div>
+            <div />
           </div>
 
-        </div>{/* /grid */}
+          {/* Row 5 — LLM 2: centered */}
+          <div className="grid grid-cols-4 gap-4">
+            <div />
+            <div className="col-span-2">
+              <LLMCard
+                label="Content curation"
+                cardRef={llm2Ref}
+                provider={llm2Provider}
+                model={llm2Model}
+                onProvider={setLlm2Provider}
+                onModel={setLlm2Model}
+              />
+            </div>
+            <div />
+          </div>
+
+          {/* Row 6 — TTS: centered */}
+          <div className="grid grid-cols-4 gap-4">
+            <div />
+            <div className="col-span-2">
+              <div ref={ttsRef} className={`rounded-lg p-4 ${cardBg}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  {ttsBackend === "kokoro" ? (
+                    <img src={hexgradLogo} alt="Kokoro" className="w-4 h-4 object-contain rounded" />
+                  ) : ttsBackend === "edge-tts" ? (
+                    <Icon icon="logos:microsoft-icon" className="w-4 h-4" />
+                  ) : (
+                    <Icon icon="logos:openai-icon" className="w-4 h-4" />
+                  )}
+                  <span className="text-xs font-semibold">TTS</span>
+                  <span className={`text-xs ${dimText}`}>Text to Speech</span>
+                </div>
+                <p className={`text-xs ${dimText} mb-1`}>Engine</p>
+                <CustomSelect isDark={isDark} accent="lime" value={ttsBackend} options={TTS_BACKENDS} onChange={setTtsBackend} />
+              </div>
+            </div>
+            <div />
+          </div>
+
+        </div>{/* /cards grid */}
       </div>{/* /relative container */}
     </div>
   );
