@@ -76,7 +76,6 @@ function getRelRect(el: HTMLElement, container: HTMLElement): CardRectData {
 }
 const btmC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y + r.h });
 const topC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y });
-const rgtC = (r: CardRectData) => ({ x: r.x + r.w, y: r.y + r.h / 2 });
 const pts  = (...ps: Array<{ x: number; y: number }>) =>
   ps.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(" ");
 
@@ -156,17 +155,29 @@ function CustomSelect({
 
 // ────────────────────────────────── ConfigurationPanel
 
-function ConfigurationPanel({ theme }: { theme: Theme }) {
+interface ConfigPanelProps {
+  theme: Theme;
+  sttModel: string; setSttModel: (v: string) => void;
+  llm1Provider: LLMProvider; setLlm1Provider: (v: LLMProvider) => void;
+  llm1Model: string; setLlm1Model: (v: string) => void;
+  llm2Provider: LLMProvider; setLlm2Provider: (v: LLMProvider) => void;
+  llm2Model: string; setLlm2Model: (v: string) => void;
+  ttsBackend: string; setTtsBackend: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saved: boolean;
+}
+
+function ConfigurationPanel({
+  theme, sttModel, setSttModel,
+  llm1Provider, setLlm1Provider, llm1Model, setLlm1Model,
+  llm2Provider, setLlm2Provider, llm2Model, setLlm2Model,
+  ttsBackend, setTtsBackend,
+  onSave, saving, saved,
+}: ConfigPanelProps) {
   const isDark  = theme === "dark";
   const cardBg  = isDark ? "bg-zinc-900/90" : "bg-white";
   const dimText = isDark ? "text-white/40"  : "text-black/40";
-
-  const [sttModel,     setSttModel]     = useState<string>(STT_MODELS[0]);
-  const [llm1Provider, setLlm1Provider] = useState<LLMProvider>(PROVIDERS[0]);
-  const [llm1Model,    setLlm1Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
-  const [llm2Provider, setLlm2Provider] = useState<LLMProvider>(PROVIDERS[0]);
-  const [llm2Model,    setLlm2Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
-  const [ttsBackend,   setTtsBackend]   = useState<string>(TTS_BACKENDS[0]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const sttRef   = useRef<HTMLDivElement>(null);
@@ -203,7 +214,7 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
     const arxivB = btmC(arxivR);
     const pdfB   = btmC(pdfR);
 
-    // STT + Text elbow into LLM1 top
+    // STT elbow into LLM1 top
     const midY1 = sttB.y + (llm1T.y - sttB.y) / 2;
 
     // LLM1 bottom → ArXiv top  (LLM spans cols 2-3, ArXiv is at col 2)
@@ -224,9 +235,9 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
         points: pts(sttB, { x: sttB.x, y: midY1 }, { x: llm1T.x, y: midY1 }, llm1T),
       },
       {
-        id: "txt-llm1",
+        id: "txt-arxiv",
         color: ROSE_HEX,
-        points: pts(txtB, { x: txtB.x, y: rgtC(llm1R).y }, rgtC(llm1R)),
+        points: pts(txtB, { x: txtB.x, y: midY2 }, { x: arxivR.x + arxivR.w * 0.65, y: midY2 }, { x: arxivR.x + arxivR.w * 0.65, y: arxivR.y }),
       },
       {
         id: "llm1-arxiv",
@@ -503,6 +514,27 @@ function ConfigurationPanel({ theme }: { theme: Theme }) {
 
         </div>{/* /cards grid */}
       </div>{/* /relative container */}
+
+      {/* Save / saved indicator */}
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-2 rounded text-xs bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors disabled:opacity-50"
+        >
+          {saving
+            ? <Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" />
+            : <Icon icon="mdi:content-save" className="w-3.5 h-3.5" />
+          }
+          {saving ? "Saving…" : "Save configuration"}
+        </button>
+        {saved && (
+          <span className={`flex items-center gap-1 text-xs text-lime-500`}>
+            <Icon icon="mdi:check-circle" className="w-3.5 h-3.5" />
+            Saved
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -891,6 +923,53 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
 
   const [tab, setTab] = useState<Tab>("configuration");
 
+  // ── Pipeline config – shared across Configuration / Convert / Research
+  const [sttModel,     setSttModel]     = useState<string>(STT_MODELS[0]);
+  const [llm1Provider, setLlm1Provider] = useState<LLMProvider>(PROVIDERS[0]);
+  const [llm1Model,    setLlm1Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
+  const [llm2Provider, setLlm2Provider] = useState<LLMProvider>(PROVIDERS[0]);
+  const [llm2Model,    setLlm2Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
+  const [ttsBackend,   setTtsBackend]   = useState<string>(TTS_BACKENDS[0]);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configSaved,  setConfigSaved]  = useState(false);
+
+  // Load persisted config on mount
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d: Record<string, string>) => {
+        if (d.stt_model)     setSttModel(d.stt_model);
+        if (d.llm1_provider) setLlm1Provider(d.llm1_provider as LLMProvider);
+        if (d.llm1_model)    setLlm1Model(d.llm1_model);
+        if (d.llm2_provider) setLlm2Provider(d.llm2_provider as LLMProvider);
+        if (d.llm2_model)    setLlm2Model(d.llm2_model);
+        if (d.tts_backend)   setTtsBackend(d.tts_backend);
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSaveConfig = async () => {
+    setConfigSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stt_model:    sttModel,
+          llm1_provider: llm1Provider,
+          llm1_model:   llm1Model,
+          llm2_provider: llm2Provider,
+          llm2_model:   llm2Model,
+          tts_backend:  ttsBackend,
+        }),
+      });
+      setConfigSaved(true);
+      setTimeout(() => setConfigSaved(false), 3000);
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
   // ── Convert tab state
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -905,6 +984,13 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
   const [results, setResults] = useState<ArxivResult[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [researchJobs, setResearchJobs] = useState<Array<{ arxiv_id: string; job_id: string }>>([]);
+  const [recording,       setRecording]       = useState(false);
+  const [normalizing,     setNormalizing]     = useState(false);
+  const [normalizedQuery, setNormalizedQuery] = useState<string | null>(null);
+  const [normalizeError,  setNormalizeError]  = useState<string | null>(null);
+  const [hasSearched,     setHasSearched]     = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef        = useRef<Blob[]>([]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -921,6 +1007,9 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
 
     const form = new FormData();
     form.append("file", file);
+    form.append("tts_backend",  ttsBackend);
+    form.append("llm_provider", llm1Provider);
+    form.append("llm_model",    llm1Model);
     try {
       const res = await fetch("/api/convert/enqueue", { method: "POST", body: form });
       const data = await res.json();
@@ -950,15 +1039,45 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
     [onConverted, setActiveAudio]
   );
 
-  const handleSearch = async () => {
+  const handleNormalize = async () => {
     if (!query.trim()) return;
+    setNormalizing(true);
+    setNormalizedQuery(null);
+    setNormalizeError(null);
+    setResults([]);
+    try {
+      const res = await fetch("/api/research/normalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, llm_provider: llm1Provider, llm_model: llm1Model }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setNormalizeError(err.detail ?? `Server error ${res.status}`);
+      } else {
+        const data = await res.json();
+        setNormalizedQuery(data.search_string ?? query);
+      }
+    } catch (e) {
+      setNormalizeError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setNormalizing(false);
+    }
+  };
+
+  // rawQuery: pass explicit string for a direct search (bypasses normalization)
+  const handleSearch = async (rawQuery?: string) => {
+    const q = rawQuery !== undefined ? rawQuery : (normalizedQuery ?? query);
+    if (!q.trim()) return;
+    if (rawQuery !== undefined) { setNormalizedQuery(null); setNormalizeError(null); }
     setSearching(true);
+    setHasSearched(true);
     setResults([]);
     try {
       const res = await fetch("/api/research/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, max_results: 10 }),
+        body: JSON.stringify({ query: q, max_results: 10 }),
       });
       const data = await res.json();
       setResults(data.results ?? []);
@@ -974,7 +1093,12 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
     const res = await fetch("/api/research/enqueue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ arxiv_ids: Array.from(selectedIds) }),
+      body: JSON.stringify({
+        arxiv_ids:    Array.from(selectedIds),
+        llm_provider: llm1Provider,
+        llm_model:    llm1Model,
+        tts_backend:  ttsBackend,
+      }),
     });
     const data = await res.json();
     if (data.jobs) {
@@ -989,6 +1113,34 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+        const form = new FormData();
+        form.append("file", blob, "recording.webm");
+        try {
+          const res = await fetch("/api/research/transcribe", { method: "POST", body: form });
+          const data = await res.json();
+          if (data.text) setQuery(data.text);
+        } catch { /* silent – transcription failed */ }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch { /* mic denied or unavailable */ }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
   };
 
   return (
@@ -1022,7 +1174,18 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {/* ── Configuration tab ── */}
         {tab === "configuration" && (
-          <ConfigurationPanel theme={theme} />
+          <ConfigurationPanel
+            theme={theme}
+            sttModel={sttModel}         setSttModel={setSttModel}
+            llm1Provider={llm1Provider} setLlm1Provider={setLlm1Provider}
+            llm1Model={llm1Model}       setLlm1Model={setLlm1Model}
+            llm2Provider={llm2Provider} setLlm2Provider={setLlm2Provider}
+            llm2Model={llm2Model}       setLlm2Model={setLlm2Model}
+            ttsBackend={ttsBackend}     setTtsBackend={setTtsBackend}
+            onSave={handleSaveConfig}
+            saving={configSaving}
+            saved={configSaved}
+          />
         )}
 
         {/* ── Convert tab ── */}
@@ -1130,7 +1293,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
         {tab === "research" && (
           <div className="max-w-2xl mx-auto">
             <p className={`text-xs ${dimText} mb-6`}>
-              Search ArXiv for papers, select them, and convert to audio.
+              Search arXiv for papers, select them, and convert to audio.
             </p>
 
             {/* Search input */}
@@ -1138,24 +1301,104 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setNormalizedQuery(null); setNormalizeError(null); setHasSearched(false); }}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="e.g. Architectural designs in agentic AI"
                 className={`flex-1 bg-transparent border ${inputBg} rounded px-3 py-2 text-sm outline-none focus:border-cyan-500 transition-colors`}
               />
               <button
-                onClick={handleSearch}
-                disabled={searching || !query.trim()}
-                className="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-500 rounded text-sm transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                onClick={recording ? stopRecording : startRecording}
+                title={recording ? "Stop recording" : "Record voice query"}
+                className={`px-3 py-2 rounded border text-sm transition-colors flex items-center ${
+                  recording
+                    ? "bg-rose-500/20 border-rose-500/50 text-rose-400 animate-pulse"
+                    : "bg-lime-500/10 hover:bg-lime-500/20 border-lime-500/30 text-lime-500"
+                }`}
               >
-                {searching ? (
+                <Icon icon={recording ? "mdi:stop" : "mdi:microphone"} className="w-4 h-4" />
+              </button>
+              {/* LLM-assisted normalise */}
+              <button
+                onClick={handleNormalize}
+                disabled={normalizing || searching || !query.trim()}
+                title="Rewrite query with LLM for better ArXiv results"
+                className={`px-3 py-2 rounded border text-sm transition-colors disabled:opacity-50 flex items-center gap-1.5 ${
+                  isDark
+                    ? "bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-400"
+                    : "bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-700"
+                }`}
+              >
+                {normalizing ? (
                   <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Icon icon="mdi:magnify" className="w-4 h-4" />
+                  <Icon icon="hugeicons:ai-brain-03" className="w-4 h-4" />
                 )}
-                Search
+                Normalize query
               </button>
             </div>
+
+            {/* Normalize spinner */}
+            {normalizing && (
+              <div className={`mt-3 flex items-center gap-2 text-xs ${dimText}`}>
+                <Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" />
+                Normalising query with LLM…
+              </div>
+            )}
+
+            {/* Normalize error */}
+            {!normalizing && normalizeError !== null && (
+              <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded border text-xs ${
+                isDark ? "border-rose-500/40 bg-rose-500/10 text-rose-400" : "border-rose-400/50 bg-rose-50 text-rose-700"
+              }`}>
+                <Icon icon="mdi:alert-circle-outline" className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">LLM normalization failed: {normalizeError}</span>
+                <button onClick={() => setNormalizeError(null)} className="opacity-60 hover:opacity-100 transition-opacity">
+                  <Icon icon="mdi:close" className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* LLM normalization confirmation pane */}
+            {!normalizing && normalizedQuery !== null && (
+              <div className={`mt-3 p-3 rounded border ${
+                isDark ? "border-purple-500/30 bg-purple-500/5" : "border-purple-300/50 bg-purple-50"
+              }`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className={`text-xs font-medium ${
+                    isDark ? "text-purple-400" : "text-purple-700"
+                  }`}>LLM-normalised — edit if needed:</p>
+                  <button
+                    onClick={() => setNormalizedQuery(null)}
+                    className="opacity-50 hover:opacity-100 transition-opacity"
+                    title="Dismiss"
+                  >
+                    <Icon icon="mdi:close" className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <textarea
+                  value={normalizedQuery}
+                  onChange={(e) => setNormalizedQuery(e.target.value)}
+                  rows={2}
+                  className={`w-full bg-transparent border ${
+                    isDark ? "border-white/20" : "border-black/20"
+                  } rounded px-2.5 py-1.5 text-sm outline-none focus:border-cyan-500 resize-none transition-colors`}
+                />
+              </div>
+            )}
+
+            {/* Search ArXiv button — always present below input/pane */}
+            <button
+              onClick={() => handleSearch()}
+              disabled={searching || normalizing || !query.trim()}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-500 rounded text-sm transition-colors disabled:opacity-50"
+            >
+              {searching ? (
+                <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
+              ) : (
+                <Icon icon="mdi:magnify" className="w-4 h-4" />
+              )}
+              Search arXiv
+            </button>
 
             {/* Results */}
             {results.length > 0 && (
@@ -1239,7 +1482,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
               </>
             )}
 
-            {!searching && results.length === 0 && query && (
+            {!searching && results.length === 0 && hasSearched && (
               <p className={`text-xs ${dimText} mt-4`}>No results found.</p>
             )}
           </div>

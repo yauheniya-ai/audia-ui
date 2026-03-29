@@ -27,6 +27,7 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
     <header className={`${bg} ${text} border-b ${border} px-6 py-3 flex items-center justify-between shrink-0`}>
       {/* Logo */}
       <div className="flex items-center gap-4">
+        <Icon icon="streamline-freehand:help-headphones-customer-support-human" className="w-7 h-7 text-purple-500" />
         <span className="text-purple-500 font-bold text-sm tracking-widest uppercase">
           audia
         </span>
