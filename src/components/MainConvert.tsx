@@ -422,8 +422,11 @@ export function MainConvert({
     e.preventDefault();
     setDragging(false);
     const f = e.dataTransfer.files[0];
-    if (f?.name.endsWith(".pdf")) setFile(f);
-  }, []);
+    if (f?.name.endsWith(".pdf")) {
+      setFile(f);
+      setLivePreviewPdf({ url: URL.createObjectURL(f), title: f.name });
+    }
+  }, [setLivePreviewPdf]);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -495,6 +498,7 @@ export function MainConvert({
               setFile(f);
               setJobId(null);
               setConvertResult(null);
+              setLivePreviewPdf({ url: URL.createObjectURL(f), title: f.name });
             }
           }}
         />
@@ -534,7 +538,7 @@ export function MainConvert({
       {/* Reset */}
       {file && convertResult && (
         <button
-          onClick={() => { setFile(null); setJobId(null); setConvertResult(null); }}
+          onClick={() => { setFile(null); setJobId(null); setConvertResult(null); setLivePreviewPdf(null); }}
           className={`mt-3 text-xs ${dimText} hover:text-rose-500 transition-colors flex items-center gap-1`}
         >
           <Icon icon="mdi:refresh" className="w-3.5 h-3.5" />
