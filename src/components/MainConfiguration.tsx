@@ -389,7 +389,7 @@ export function MainConfiguration({
             <div ref={arxivRef} className={`rounded-lg p-4 ${cardBg}`}>
               <div className="flex items-center gap-2 mb-2">
                 <img src={arxivLogo} alt="ArXiv" className="w-4 h-4 object-contain" />
-                <span className="text-xs font-semibold">ArXiv</span>
+                <span className="text-xs font-semibold">arXiv</span>
                 <span className={`text-xs ${dimText}`}>Paper search</span>
               </div>
               <p className={`text-xs ${dimText} leading-relaxed`}>

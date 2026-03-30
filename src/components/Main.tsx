@@ -6,6 +6,7 @@ import type { LLMProvider } from "../constants";
 import { MainConfiguration } from "./MainConfiguration";
 import { MainConvert, AudioPlayer } from "./MainConvert";
 import { MainResearch } from "./MainResearch";
+import { MainDatabase } from "./MainDatabase";
 
 interface MainProps {
   theme: Theme;
@@ -15,7 +16,7 @@ interface MainProps {
   setLivePreviewPdf: (p: LivePreview | null) => void;
 }
 
-type Tab = "configuration" | "convert" | "research";
+type Tab = "configuration" | "convert" | "research" | "database";
 
 
 
@@ -90,6 +91,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
           { id: "configuration", label: "Configuration", icon: "mdi:tune-vertical" },
           { id: "convert",       label: "Convert",       icon: "mdi:file-arrow-up-down" },
           { id: "research",      label: "Research",      icon: "mdi:magnify" },
+          { id: "database",     label: "Database",      icon: "mdi:database-outline" },
         ] as Array<{ id: Tab; label: string; icon: string }>).map(({ id, label, icon }) => {
           const active = tab === id;
           return (
@@ -146,6 +148,9 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}
           />
+        )}
+        {tab === "database" && (
+          <MainDatabase theme={theme} />
         )}
       </div>
 
