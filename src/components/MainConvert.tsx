@@ -55,6 +55,7 @@ export function ConversionProgress({
 }) {
   const isDark = theme === "dark";
   const [job, setJob] = useState<JobStatus | null>(null);
+  const [showLog, setShowLog] = useState(false);
   const dimText = isDark ? "text-white/40" : "text-black/40";
   const logRef = useRef<HTMLDivElement>(null);
   const previewShown = useRef(false);
@@ -167,14 +168,28 @@ export function ConversionProgress({
       </div>
 
       {job.log && job.log.length > 0 && (
-        <div
-          ref={logRef}
-          className={`font-mono text-xs rounded p-3 overflow-y-auto max-h-44 space-y-0.5 leading-relaxed
-            ${isDark ? "bg-white/3 text-white/60" : "bg-black/3 text-black/60"}`}
-        >
-          {job.log.map((line, i) => (
-            <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
-          ))}
+        <div>
+          <button
+            onClick={() => setShowLog((v) => !v)}
+            className={`flex items-center gap-1 text-xs ${dimText} hover:text-current transition-colors`}
+          >
+            <Icon
+              icon={showLog ? "mdi:chevron-down" : "mdi:chevron-right"}
+              className="w-3.5 h-3.5"
+            />
+            {showLog ? "Hide full progress" : "Show full progress"}
+          </button>
+          {showLog && (
+            <div
+              ref={logRef}
+              className={`mt-2 font-mono text-xs rounded p-3 overflow-y-auto max-h-44 space-y-0.5 leading-relaxed
+                ${isDark ? "bg-white/8 text-white/60" : "bg-black/8 text-black/60"}`}
+            >
+              {job.log.map((line, i) => (
+                <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -534,18 +549,7 @@ export function MainConvert({
           {uploading ? "Uploading…" : "Convert to audio"}
         </button>
       )}
-
-      {/* Reset */}
-      {file && convertResult && (
-        <button
-          onClick={() => { setFile(null); setJobId(null); setConvertResult(null); setLivePreviewPdf(null); }}
-          className={`mt-3 text-xs ${dimText} hover:text-rose-500 transition-colors flex items-center gap-1`}
-        >
-          <Icon icon="mdi:refresh" className="w-3.5 h-3.5" />
-          Convert another file
-        </button>
-      )}
-
+      
       {/* Progress */}
       {jobId && !convertResult && (
         <ConversionProgress
@@ -565,6 +569,18 @@ export function MainConvert({
           <span>{convertResult.title} — {convertResult.num_pages} pages converted. See player below.</span>
         </div>
       )}
+      {/* Reset */}
+      {file && convertResult && (
+        <button
+          onClick={() => { setFile(null); setJobId(null); setConvertResult(null); setLivePreviewPdf(null); }}
+          className={`mt-3 text-xs ${dimText} hover:text-rose-500 transition-colors flex items-center gap-1`}
+        >
+          <Icon icon="mdi:refresh" className="w-3.5 h-3.5" />
+          Convert another file
+        </button>
+      )}
+
+
     </div>
   );
 }
