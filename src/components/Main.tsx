@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import type { AudioEntry, LivePreview, Theme } from "../App";
-import { PROVIDERS, PROVIDER_MODELS, STT_MODELS, TTS_BACKENDS } from "../constants";
-import type { LLMProvider } from "../constants";
+import { PROVIDERS, PROVIDER_MODELS, STT_MODELS, TTS_BACKENDS, TTS_VOICES } from "../constants";
+import type { LLMProvider, TTSBackend } from "../constants";
 import { MainConfiguration } from "./MainConfiguration";
 import { MainConvert, AudioPlayer } from "./MainConvert";
 import { MainResearch } from "./MainResearch";
@@ -41,6 +41,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
   const [llm2Provider, setLlm2Provider] = useState<LLMProvider>(PROVIDERS[0]);
   const [llm2Model,    setLlm2Model]    = useState(PROVIDER_MODELS[PROVIDERS[0]][0]);
   const [ttsBackend,   setTtsBackend]   = useState<string>(TTS_BACKENDS[0]);
+  const [ttsVoice,     setTtsVoice]     = useState<string>(TTS_VOICES[TTS_BACKENDS[0]][0]);
   const [configSaving, setConfigSaving] = useState(false);
   const [configSaved,  setConfigSaved]  = useState(false);
 
@@ -55,6 +56,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
         if (d.llm2_provider) setLlm2Provider(d.llm2_provider as LLMProvider);
         if (d.llm2_model)    setLlm2Model(d.llm2_model);
         if (d.tts_backend)   setTtsBackend(d.tts_backend);
+        if (d.tts_voice)     setTtsVoice(d.tts_voice);
       })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -72,6 +74,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
           llm2_provider: llm2Provider,
           llm2_model:   llm2Model,
           tts_backend:  ttsBackend,
+          tts_voice:    ttsVoice,
         }),
       });
       setConfigSaved(true);
@@ -121,7 +124,8 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             llm1Model={llm1Model}       setLlm1Model={setLlm1Model}
             llm2Provider={llm2Provider} setLlm2Provider={setLlm2Provider}
             llm2Model={llm2Model}       setLlm2Model={setLlm2Model}
-            ttsBackend={ttsBackend}     setTtsBackend={setTtsBackend}
+            ttsBackend={ttsBackend}     setTtsBackend={(v) => { setTtsBackend(v); setTtsVoice(TTS_VOICES[v as TTSBackend][0]); }}
+            ttsVoice={ttsVoice}         setTtsVoice={setTtsVoice}
             onSave={handleSaveConfig}
             saving={configSaving}
             saved={configSaved}

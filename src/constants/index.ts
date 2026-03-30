@@ -1,3 +1,14 @@
+import arxivLogo   from '../assets/arxiv.svg';
+import systranLogo from '../assets/systran.svg';
+import hexgradLogo from '../assets/hexgrad.webp';
+
+// ─────────────────────────────────────────── Icon definitions
+
+/** Discriminated union for iconify icons vs image assets. */
+export type IconDef =
+  | { kind: 'icon'; name: string; adaptive?: boolean }  // adaptive = respects isDark
+  | { kind: 'img';  src: string;  alt: string };
+
 // ─────────────────────────────────────────── LLM providers
 // Only providers that are implemented in the backend (openai, anthropic).
 // Expand this list as new backends are added.
@@ -5,13 +16,9 @@
 export const PROVIDERS = ['Anthropic', 'OpenAI'] as const;
 export type LLMProvider = (typeof PROVIDERS)[number];
 
-export const PROVIDER_ICONS: Record<LLMProvider, string> = {
-  Anthropic: 'logos:claude-icon',
-  OpenAI: 'logos:openai-icon',
-  // ArXiv: use frontend/src/assets/arxiv.svg
-  // edge-tts: 'logos:microsoft-icon'
-  // kokoro: use frontend/src/assets/hexgrad.webp
-  // faster whisper -> frontend/src/assets/systran.svg
+export const PROVIDER_ICONS: Record<LLMProvider, IconDef> = {
+  Anthropic: { kind: 'icon', name: 'logos:claude-icon' },
+  OpenAI:    { kind: 'icon', name: 'simple-icons:openai', adaptive: true },
 };
 
 export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
@@ -45,6 +52,17 @@ export const TTS_BACKENDS = [
   'openai',     // requires OpenAI API key
 ] as const;
 export type TTSBackend = (typeof TTS_BACKENDS)[number];
+
+// ─────────────────────────────────────────── Service / backend icon definitions
+
+export const STT_ICON: IconDef = { kind: 'img', src: systranLogo, alt: 'Systran' };
+export const ARXIV_ICON: IconDef = { kind: 'img', src: arxivLogo, alt: 'arXiv' };
+
+export const TTS_BACKEND_ICONS: Record<TTSBackend, IconDef> = {
+  'edge-tts': { kind: 'icon', name: 'logos:microsoft-icon' },
+  'kokoro':   { kind: 'img',  src: hexgradLogo, alt: 'Kokoro' },
+  'openai':   { kind: 'icon', name: 'simple-icons:openai', adaptive: true },
+};
 
 export const TTS_VOICES: Record<TTSBackend, string[]> = {
   'edge-tts': [

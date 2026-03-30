@@ -14,9 +14,13 @@ import {
   TTS_BACKENDS,
 } from "../constants";
 import type { LLMProvider } from "../constants";
-import arxivLogo   from "../assets/arxiv.svg";
-import systranLogo from "../assets/systran.svg";
-import hexgradLogo from "../assets/hexgrad.webp";
+import {
+  ARXIV_ICON,
+  STT_ICON,
+  TTS_BACKEND_ICONS,
+  TTS_VOICES,
+} from "../constants";
+import type { IconDef, TTSBackend } from "../constants";
 
 // ────────────────────────────────── Diagram helpers
 
@@ -36,6 +40,16 @@ const btmC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y + r.h });
 const topC = (r: CardRectData) => ({ x: r.x + r.w / 2, y: r.y });
 const pts  = (...ps: Array<{ x: number; y: number }>) =>
   ps.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(" ");
+
+// ────────────────────────────────── renderIconDef
+
+function renderIconDef(icon: IconDef, isDark: boolean, className = "w-4 h-4") {
+  if (icon.kind === "img") {
+    return <img src={icon.src} alt={icon.alt} className={`${className} object-contain`} />;
+  }
+  const colorClass = icon.adaptive ? (isDark ? "text-white" : "text-black") : "";
+  return <Icon icon={icon.name} className={`${className} ${colorClass}`.trim()} />;
+}
 
 // ────────────────────────────────── CustomSelect
 
@@ -121,6 +135,7 @@ export interface MainConfigurationProps {
   llm2Provider: LLMProvider; setLlm2Provider: (v: LLMProvider) => void;
   llm2Model: string;      setLlm2Model: (v: string) => void;
   ttsBackend: string;     setTtsBackend: (v: string) => void;
+  ttsVoice: string;       setTtsVoice: (v: string) => void;
   onSave: () => void;
   saving: boolean;
   saved: boolean;
@@ -130,7 +145,7 @@ export function MainConfiguration({
   theme, sttModel, setSttModel,
   llm1Provider, setLlm1Provider, llm1Model, setLlm1Model,
   llm2Provider, setLlm2Provider, llm2Model, setLlm2Model,
-  ttsBackend, setTtsBackend,
+  ttsBackend, setTtsBackend, ttsVoice, setTtsVoice,
   onSave, saving, saved,
 }: MainConfigurationProps) {
   const isDark  = theme === "dark";
@@ -254,7 +269,7 @@ export function MainConfiguration({
   }) => (
     <div ref={cardRef} className={`rounded-lg p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
-        <Icon icon={PROVIDER_ICONS[provider]} className="w-4 h-4" />
+        {renderIconDef(PROVIDER_ICONS[provider], isDark)}
         <span className="text-xs font-semibold">LLM</span>
         <span className={`text-xs ${dimText}`}>{label}</span>
       </div>
@@ -351,7 +366,7 @@ export function MainConfiguration({
           <div className="grid grid-cols-2 gap-4">
             <div ref={sttRef} className={`rounded-lg p-4 ${cardBg}`}>
               <div className="flex items-center gap-2 mb-3">
-                <img src={systranLogo} alt="Systran" className="w-4 h-4 object-contain" />
+                {renderIconDef(STT_ICON, isDark)}
                 <span className="text-xs font-semibold">STT</span>
                 <span className={`text-xs ${dimText}`}>Speech to Text</span>
               </div>
@@ -388,7 +403,7 @@ export function MainConfiguration({
           <div className="grid grid-cols-2 gap-4">
             <div ref={arxivRef} className={`rounded-lg p-4 ${cardBg}`}>
               <div className="flex items-center gap-2 mb-2">
-                <img src={arxivLogo} alt="ArXiv" className="w-4 h-4 object-contain" />
+                {renderIconDef(ARXIV_ICON, isDark)}
                 <span className="text-xs font-semibold">arXiv</span>
                 <span className={`text-xs ${dimText}`}>Paper search</span>
               </div>
@@ -448,18 +463,20 @@ export function MainConfiguration({
             <div className="col-span-2">
               <div ref={ttsRef} className={`rounded-lg p-4 ${cardBg}`}>
                 <div className="flex items-center gap-2 mb-3">
-                  {ttsBackend === "kokoro" ? (
-                    <img src={hexgradLogo} alt="Kokoro" className="w-4 h-4 object-contain rounded" />
-                  ) : ttsBackend === "edge-tts" ? (
-                    <Icon icon="logos:microsoft-icon" className="w-4 h-4" />
-                  ) : (
-                    <Icon icon="logos:openai-icon" className="w-4 h-4" />
-                  )}
+                  {renderIconDef(TTS_BACKEND_ICONS[ttsBackend as TTSBackend], isDark, "w-4 h-4 rounded")}
                   <span className="text-xs font-semibold">TTS</span>
                   <span className={`text-xs ${dimText}`}>Text to Speech</span>
                 </div>
-                <p className={`text-xs ${dimText} mb-1`}>Engine</p>
-                <CustomSelect isDark={isDark} accent="lime" value={ttsBackend} options={TTS_BACKENDS} onChange={setTtsBackend} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className={`text-xs ${dimText} mb-1`}>Engine</p>
+                    <CustomSelect isDark={isDark} accent="lime" value={ttsBackend} options={TTS_BACKENDS} onChange={(v) => { setTtsBackend(v); setTtsVoice(TTS_VOICES[v as TTSBackend][0]); }} />
+                  </div>
+                  <div>
+                    <p className={`text-xs ${dimText} mb-1`}>Voice</p>
+                    <CustomSelect isDark={isDark} accent="lime" value={ttsVoice} options={TTS_VOICES[ttsBackend as TTSBackend]} onChange={setTtsVoice} />
+                  </div>
+                </div>
               </div>
             </div>
             <div />
@@ -479,7 +496,7 @@ export function MainConfiguration({
             ? <Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" />
             : <Icon icon="mdi:content-save" className="w-3.5 h-3.5" />
           }
-          {saving ? "Saving…" : "Save configuration"}
+          {saving ? "Saving…" : "Save"}
         </button>
         {saved && (
           <span className="flex items-center gap-1 text-xs text-lime-500">
