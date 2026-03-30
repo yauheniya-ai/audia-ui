@@ -76,48 +76,13 @@ const TABLE_ROOT_KEY: Record<TableName, string> = {
   user_settings:     "user_settings",
 };
 
-const MMD = `erDiagram
-  papers {
-    int     id PK
-    varchar title
-    text    authors
-    text    abstract
-    varchar arxiv_id
-    text    pdf_path
-    text    pdf_url
-    datetime created_at
-  }
-  audio_files {
-    int     id PK
-    int     paper_id FK
-    varchar filename
-    text    file_path
-    float   duration_seconds
-    varchar tts_backend
-    varchar tts_voice
-    datetime created_at
-  }
-  research_sessions {
-    int  id PK
-    text query
-    text paper_ids
-    datetime created_at
-  }
-  user_settings {
-    varchar key PK
-    text    value
-  }
-
-  papers ||--o{ audio_files : "has"
-  papers }o..o{ research_sessions : "referenced in paper_ids"`;
-
 // ────────────────────────────────── Colour helpers
 
 const COLORS: Record<string, { border: string; heading: string; badge: string; dimBadge: string }> = {
-  rose:   { border: "border-rose-500/40",   heading: "text-rose-500",   badge: "bg-rose-500/15 text-rose-400",   dimBadge: "bg-rose-500/10 text-rose-300/60"   },
-  violet: { border: "border-violet-500/40", heading: "text-violet-500", badge: "bg-violet-500/15 text-violet-400", dimBadge: "bg-violet-500/10 text-violet-300/60" },
-  cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-500",   badge: "bg-cyan-500/15 text-cyan-400",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
-  amber:  { border: "border-amber-500/40",  heading: "text-amber-500",  badge: "bg-amber-500/15 text-amber-400", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
+  rose:   { border: "border-rose-500/40",   heading: "text-rose-500",   badge: "bg-rose-500/15 text-rose-500",   dimBadge: "bg-rose-500/10 text-rose-300/60"   },
+  violet: { border: "border-violet-500/40", heading: "text-violet-500", badge: "bg-violet-500/15 text-violet-500", dimBadge: "bg-violet-500/10 text-violet-300/60" },
+  cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-500",   badge: "bg-cyan-500/15 text-cyan-500",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
+  amber:  { border: "border-amber-500/40",  heading: "text-amber-500",  badge: "bg-amber-500/15 text-amber-500", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
 };
 
 // ────────────────────────────────── Sub-components
@@ -183,14 +148,11 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
     ? "bg-white/5 border-white/10"
     : "bg-black/5 border-black/10";
   const cardBg  = isDark ? "bg-white/[0.03]" : "bg-black/[0.02]";
-  const codeBg  = isDark ? "bg-black/40" : "bg-black/5";
 
   const [selectedTable, setSelectedTable] = useState<TableName>("papers");
   const [rows,          setRows]          = useState<Record<string, unknown>[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
-  const [showMmd,       setShowMmd]       = useState(false);
-  const [copied,        setCopied]        = useState(false);
 
   useEffect(() => {
     setRows([]);
@@ -211,13 +173,6 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
 
   const columns = rows.length > 0 ? Object.keys(rows[0]) : SCHEMA[selectedTable].columns.map((c) => c.name);
 
-  const handleCopyMmd = () => {
-    navigator.clipboard.writeText(MMD).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
   return (
     <div className="space-y-8">
 
@@ -235,43 +190,18 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
         {/* Relationships */}
         <div className={`mt-3 flex flex-wrap gap-4 text-[11px] font-mono ${dimText}`}>
           <span className="flex items-center gap-1.5">
-            <span className="text-violet-400">audio_files.paper_id</span>
+            <span className="text-violet-500">audio_files.paper_id</span>
             <Icon icon="mdi:arrow-right" className="w-3 h-3" />
-            <span className="text-rose-400">papers.id</span>
+            <span className="text-rose-500">papers.id</span>
             <span className="opacity-60 ml-1">(FK, one-to-many)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-cyan-400">research_sessions.paper_ids</span>
+            <span className="text-cyan-500">research_sessions.paper_ids</span>
             <Icon icon="mdi:arrow-right-dashed" className="w-3 h-3" />
-            <span className="text-rose-400">papers.id[]</span>
+            <span className="text-rose-500">papers.id[]</span>
             <span className="opacity-60 ml-1">(JSON, logical)</span>
           </span>
         </div>
-      </section>
-
-      {/* ── Mermaid ERD ─────────────────────────────────────── */}
-      <section>
-        <button
-          onClick={() => setShowMmd((v) => !v)}
-          className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity`}
-        >
-          <Icon icon={showMmd ? "mdi:chevron-down" : "mdi:chevron-right"} className="w-3.5 h-3.5" />
-          Mermaid ERD
-        </button>
-        {showMmd && (
-          <div className={`relative mt-2 rounded-lg border ${border} ${codeBg} overflow-hidden`}>
-            <button
-              onClick={handleCopyMmd}
-              className={`absolute top-2 right-2 flex items-center gap-1 text-[10px] px-2 py-1 rounded border ${border} ${inputBg} opacity-60 hover:opacity-100 transition-opacity`}
-            >
-              <Icon icon={copied ? "mdi:check" : "mdi:content-copy"} className="w-3 h-3" />
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <pre className={`p-4 text-[11px] font-mono leading-relaxed overflow-x-auto ${dimText}`}>
-              {MMD}
-            </pre>
-          </div>
-        )}
       </section>
 
       {/* ── Data explorer ───────────────────────────────────── */}
