@@ -74,7 +74,7 @@ export default function Sidebar({
   return (
     <aside
       className={`w-58 shrink-0 flex flex-col border-r ${border} overflow-y-auto`}
-      style={{ width: "220px" }}
+      style={{ width: "250px" }}
     >
       {/* Header */}
       <div className={`px-4 py-3 border-b ${border} flex items-center gap-2`}>

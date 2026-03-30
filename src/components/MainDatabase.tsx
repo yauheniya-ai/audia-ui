@@ -114,10 +114,10 @@ const MMD = `erDiagram
 // ────────────────────────────────── Colour helpers
 
 const COLORS: Record<string, { border: string; heading: string; badge: string; dimBadge: string }> = {
-  rose:   { border: "border-rose-500/40",   heading: "text-rose-400",   badge: "bg-rose-500/15 text-rose-400",   dimBadge: "bg-rose-500/10 text-rose-300/60"   },
-  violet: { border: "border-violet-500/40", heading: "text-violet-400", badge: "bg-violet-500/15 text-violet-400", dimBadge: "bg-violet-500/10 text-violet-300/60" },
-  cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-400",   badge: "bg-cyan-500/15 text-cyan-400",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
-  amber:  { border: "border-amber-500/40",  heading: "text-amber-400",  badge: "bg-amber-500/15 text-amber-400", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
+  rose:   { border: "border-rose-500/40",   heading: "text-rose-500",   badge: "bg-rose-500/15 text-rose-400",   dimBadge: "bg-rose-500/10 text-rose-300/60"   },
+  violet: { border: "border-violet-500/40", heading: "text-violet-500", badge: "bg-violet-500/15 text-violet-400", dimBadge: "bg-violet-500/10 text-violet-300/60" },
+  cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-500",   badge: "bg-cyan-500/15 text-cyan-400",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
+  amber:  { border: "border-amber-500/40",  heading: "text-amber-500",  badge: "bg-amber-500/15 text-amber-400", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
 };
 
 // ────────────────────────────────── Sub-components
