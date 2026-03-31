@@ -12,11 +12,12 @@ export type IconDef =
 // ─────────────────────────────────────────── LLM providers
 // Expand this list as new backends are added.
 
-export const PROVIDERS = ['Anthropic', 'OpenAI'] as const;
+export const PROVIDERS = ['Anthropic', 'Gemini', 'OpenAI'] as const;
 export type LLMProvider = (typeof PROVIDERS)[number];
 
 export const PROVIDER_ICONS: Record<LLMProvider, IconDef> = {
   Anthropic: { kind: 'icon', name: 'logos:claude-icon' },
+  Gemini:    { kind: 'icon', name: 'vscode-icons:file-type-gemini', adaptive: true },
   OpenAI:    { kind: 'icon', name: 'simple-icons:openai', adaptive: true },
 };
 
@@ -24,12 +25,28 @@ export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
   Anthropic: [
     'claude-opus-4-6',
     'claude-sonnet-4-6',
-    'claude-haiku-4-5-20251001',
+    'claude-opus-4-5',
+    'claude-sonnet-4-5',
+    'claude-haiku-4-5',
+  ],
+  Gemini: [
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
   ],
   OpenAI: [
     'gpt-5.4',
     'gpt-5.4-mini',
     'gpt-5.4-nano',
+    'gpt-5',
+    'gpt-5-mini',
+    'gpt-5-nano',   
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4.1-nano',
+    'gpt-4o',  
   ],
 };
 
