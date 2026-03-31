@@ -154,7 +154,12 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
           />
         )}
         {tab === "database" && (
-          <MainDatabase theme={theme} />
+          <MainDatabase
+            theme={theme}
+            onPreviewPaper={(paperId, title) =>
+              setLivePreviewPdf({ url: `/api/library/pdf/${paperId}`, title: title || `Paper #${paperId}` })
+            }
+          />
         )}
       </div>
 

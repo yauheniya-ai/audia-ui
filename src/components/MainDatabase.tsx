@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import type { Theme } from "../App";
+import { TTS_BACKENDS, TTS_VOICES } from "../constants";
+import type { TTSBackend } from "../constants";
 
 // ────────────────────────────────── Schema definition (static)
 
@@ -76,6 +79,31 @@ const TABLE_ROOT_KEY: Record<TableName, string> = {
   user_settings:     "user_settings",
 };
 
+// ────────────────────────────────── Editable-cell config
+
+const EDITABLE_COLS: Partial<Record<TableName, ReadonlySet<string>>> = {
+  papers:            new Set(["title", "authors", "abstract", "arxiv_id", "pdf_url"]),
+  audio_files:       new Set(["filename", "duration_seconds", "tts_backend", "tts_voice", "paper_id"]),
+  research_sessions: new Set(["query"]),
+  user_settings:     new Set(["value"]),
+};
+
+const TABLE_PK: Record<TableName, string> = {
+  papers:            "id",
+  audio_files:       "id",
+  research_sessions: "id",
+  user_settings:     "key",
+};
+
+const PATCH_URL: Record<TableName, (pk: unknown) => string> = {
+  papers:            (pk) => `/api/library/papers/${pk}`,
+  audio_files:       (pk) => `/api/library/audio/${pk}`,
+  research_sessions: (pk) => `/api/library/research_sessions/${pk}`,
+  user_settings:     (pk) => `/api/library/user_settings/${pk}`,
+};
+
+const NULLABLE_COLS = new Set(["arxiv_id", "pdf_url", "pdf_path"]);
+
 // ────────────────────────────────── Colour helpers
 
 const COLORS: Record<string, { border: string; heading: string; badge: string; dimBadge: string }> = {
@@ -84,6 +112,154 @@ const COLORS: Record<string, { border: string; heading: string; badge: string; d
   cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-500",   badge: "bg-cyan-500/15 text-cyan-500",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
   amber:  { border: "border-amber-500/40",  heading: "text-amber-500",  badge: "bg-amber-500/15 text-amber-500", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
 };
+
+// ────────────────────────────────── TableSelect (custom, no native)
+
+function TableSelect({ value, onChange, isDark }: {
+  value: TableName;
+  onChange: (t: TableName) => void;
+  isDark: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const tables = Object.keys(TABLE_LABELS) as TableName[];
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative ml-auto">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-md border transition-colors
+          ${
+            isDark
+              ? "bg-transparent text-white border-white/15 hover:border-white/35"
+              : "bg-transparent text-black border-black/15 hover:border-black/30"
+          }`}
+      >
+        <span>{value}</span>
+        <Icon
+          icon={open ? "mdi:chevron-up" : "mdi:chevron-down"}
+          className={`w-3.5 h-3.5 ${
+            isDark ? "text-white/30" : "text-black/30"
+          }`}
+        />
+      </button>
+      {open && (
+        <div
+          className={`absolute z-50 top-full right-0 mt-1 rounded-md border shadow-lg overflow-hidden min-w-full ${
+            isDark ? "bg-zinc-900 border-white/10" : "bg-white border-black/10"
+          }`}
+        >
+          {tables.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => { onChange(t); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
+                t === value
+                  ? isDark ? "bg-white/5 text-white" : "bg-black/5 text-black"
+                  : isDark ? "text-white/60 hover:bg-white/5" : "text-black/60 hover:bg-black/5"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────── CellSelect (portal-based for use inside overflow-x-auto tables)
+
+function CellSelect({ value, options, onChange, isDark }: {
+  value: string;
+  options: readonly string[];
+  onChange: (v: string) => void;
+  isDark: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 2, left: r.left, width: Math.max(r.width, 130) });
+    }
+    setOpen((o) => !o);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        className={`flex w-full items-center justify-between gap-1 rounded border px-2 py-1 text-xs font-mono ${
+          isDark
+            ? "bg-zinc-800 border-zinc-600 text-white"
+            : "bg-gray-50 border-gray-300 text-black"
+        }`}
+      >
+        <span className="truncate">{value}</span>
+        <Icon
+          icon={open ? "mdi:chevron-up" : "mdi:chevron-down"}
+          className="w-3 h-3 opacity-40 shrink-0"
+        />
+      </button>
+      {open && pos &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              minWidth: pos.width,
+              zIndex: 9999,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className={`rounded border shadow-xl overflow-y-auto max-h-56 ${
+              isDark ? "bg-zinc-900 border-white/15" : "bg-white border-black/10"
+            }`}
+          >
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onMouseDown={() => { onChange(opt); setOpen(false); }}
+                className={`w-full text-left px-2.5 py-1.5 text-xs font-mono whitespace-nowrap transition-colors ${
+                  opt === value
+                    ? isDark ? "bg-lime-950 text-lime-400" : "bg-lime-50 text-lime-700"
+                    : isDark ? "text-white/70 hover:bg-zinc-800" : "text-black/70 hover:bg-gray-100"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 // ────────────────────────────────── Sub-components
 
@@ -134,19 +310,152 @@ function CellValue({ value }: { value: unknown }) {
   return <span className="font-mono text-xs break-all">{s}</span>;
 }
 
+// ────────────────────────────────── EditableCell
+
+function EditableCell({
+  value,
+  isEditable,
+  isDark,
+  multiline,
+  selectOptions,
+  onSave,
+}: {
+  value: unknown;
+  isEditable: boolean;
+  isDark: boolean;
+  multiline?: boolean;
+  selectOptions?: readonly string[];
+  onSave: (val: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [flash,   setFlash]   = useState(false);
+  const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+
+  const toStr = (v: unknown): string => {
+    if (v === null || v === undefined) return "";
+    if (Array.isArray(v)) return v.join(", ");
+    return String(v);
+  };
+
+  const startEdit = () => {
+    if (!isEditable || saving) return;
+    setDraft(toStr(value));
+    setEditing(true);
+  };
+
+  useEffect(() => {
+    if (editing && !selectOptions) {
+      setTimeout(() => inputRef.current?.focus(), 10);
+    }
+  }, [editing, selectOptions]);
+
+  const commit = async (val = draft) => {
+    setEditing(false);
+    if (val === toStr(value)) return;
+    setSaving(true);
+    try {
+      await onSave(val);
+      setFlash(true);
+      setTimeout(() => setFlash(false), 1200);
+    } catch {
+      /* keep display value unchanged on error */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const keyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") { setEditing(false); return; }
+    if (e.key === "Enter" && !multiline) { e.preventDefault(); void commit(); }
+    if (e.key === "Enter" && multiline && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void commit(); }
+  };
+
+  const inputCls =
+    `w-full text-xs font-mono rounded border px-2 py-1 outline-none ${
+      isDark
+        ? "bg-zinc-800 border-zinc-600 text-white focus:border-zinc-400"
+        : "bg-gray-50 border-gray-300 text-black focus:border-gray-500"
+    }`;
+
+  if (editing) {
+    if (selectOptions) {
+      return (
+        <CellSelect
+          value={draft}
+          options={selectOptions}
+          isDark={isDark}
+          onChange={(v) => { void (async () => {
+            setEditing(false);
+            if (v === toStr(value)) return;
+            setSaving(true);
+            try { await onSave(v); setFlash(true); setTimeout(() => setFlash(false), 1200); }
+            catch { /* noop */ } finally { setSaving(false); }
+          })(); }}
+        />
+      );
+    }
+    if (multiline) {
+      return (
+        <textarea
+          ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={keyDown}
+          rows={3}
+          className={`${inputCls} resize-y min-w-[200px]`}
+        />
+      );
+    }
+    return (
+      <input
+        ref={inputRef as unknown as React.RefObject<HTMLInputElement>}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={keyDown}
+        className={`${inputCls} min-w-[100px]`}
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={startEdit}
+      className={[
+        "font-mono text-xs leading-relaxed transition-all rounded",
+        isEditable
+          ? [
+              "cursor-text px-1.5 py-0.5 -mx-1.5 -my-0.5",
+              isDark
+                ? "hover:bg-white/5"
+                : "hover:bg-black/5",
+            ].join(" ")
+          : "",
+        flash ? (isDark ? "bg-lime-500/10 !border-lime-500/40" : "bg-lime-50 !border-lime-400/50") : "",
+        saving ? "opacity-40" : "",
+      ].filter(Boolean).join(" ")}
+    >
+      {saving
+        ? <Icon icon="mdi:loading" className="w-3 h-3 animate-spin opacity-50" />
+        : <CellValue value={value} />}
+    </div>
+  );
+}
+
 // ────────────────────────────────── MainDatabase
 
 export interface MainDatabaseProps {
   theme: Theme;
+  onPreviewPaper?: (paperId: number, title: string) => void;
 }
 
-export function MainDatabase({ theme }: MainDatabaseProps) {
+export function MainDatabase({ theme, onPreviewPaper }: MainDatabaseProps) {
   const isDark  = theme === "dark";
   const border  = isDark ? "border-white/10" : "border-black/10";
   const dimText = isDark ? "text-white/40"   : "text-black/40";
-  const inputBg = isDark
-    ? "bg-white/5 border-white/10"
-    : "bg-black/5 border-black/10";
   const cardBg  = isDark ? "bg-white/[0.03]" : "bg-black/[0.02]";
 
   const [selectedTable, setSelectedTable] = useState<TableName>("papers");
@@ -171,7 +480,66 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
       .finally(() => setLoading(false));
   }, [selectedTable]);
 
-  const columns = rows.length > 0 ? Object.keys(rows[0]) : SCHEMA[selectedTable].columns.map((c) => c.name);
+  const handleCellSave = useCallback(async (rowIdx: number, col: string, rawVal: string): Promise<void> => {
+    const row = rows[rowIdx];
+    const pk  = row[TABLE_PK[selectedTable]];
+    const url = PATCH_URL[selectedTable](pk);
+
+    let fieldVal: unknown;
+    if (col === "authors") {
+      fieldVal = rawVal.split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (col === "paper_id") {
+      fieldVal = rawVal === "" ? null : parseInt(rawVal, 10);
+    } else if (col === "duration_seconds") {
+      fieldVal = rawVal === "" ? null : parseFloat(rawVal);
+    } else if (NULLABLE_COLS.has(col) && rawVal === "") {
+      fieldVal = null;
+    } else {
+      fieldVal = rawVal;
+    }
+
+    const res = await fetch(url, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ [col]: fieldVal }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    setRows((prev) => prev.map((r, i) => (i === rowIdx ? { ...r, [col]: fieldVal } : r)));
+  }, [rows, selectedTable]);
+
+  const getCellSelectOpts = (col: string, row: Record<string, unknown>): readonly string[] | undefined => {
+    if (col === "tts_backend") return TTS_BACKENDS;
+    if (col === "tts_voice")   return TTS_VOICES[String(row["tts_backend"] ?? "") as TTSBackend] ?? undefined;
+    return undefined;
+  };
+
+  const columns = rows.length > 0
+    ? Object.keys(rows[0])
+    : SCHEMA[selectedTable].columns.map((c) => c.name);
+
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set<string>());
+
+  // Reset hidden cols when table changes
+  useEffect(() => { setHiddenCols(new Set<string>()); }, [selectedTable]);
+
+  const toggleCol = (col: string) =>
+    setHiddenCols((prev) => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col); else next.add(col);
+      return next;
+    });
+
+  const visibleCols   = columns.filter((c) => !hiddenCols.has(c));
+  const collapsedCols = columns.filter((c) =>  hiddenCols.has(c));
+
+  // Column-width hints
+  const cellCls = (col: string) =>
+    col === "abstract" || col === "query"
+      ? "px-3 py-2 align-top whitespace-normal min-w-[200px] max-w-xs"
+      : col === "title" || col === "filename" || col === "authors"
+      ? "px-3 py-2 align-top whitespace-normal min-w-[160px] max-w-[280px]"
+      : "px-3 py-2 align-top whitespace-nowrap";
 
   return (
     <div className="space-y-8">
@@ -206,20 +574,18 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
 
       {/* ── Data explorer ───────────────────────────────────── */}
       <section>
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-2">
           <h2 className="text-xs font-semibold uppercase tracking-widest opacity-50">
             Data Explorer
           </h2>
-          <select
-            value={selectedTable}
-            onChange={(e) => setSelectedTable(e.target.value as TableName)}
-            className={`ml-auto text-xs font-mono px-2 py-1.5 rounded-md border ${inputBg} ${border} outline-none`}
-          >
-            {(Object.keys(TABLE_LABELS) as TableName[]).map((t) => (
-              <option key={t} value={t}>{TABLE_LABELS[t]}</option>
-            ))}
-          </select>
+          <TableSelect value={selectedTable} onChange={setSelectedTable} isDark={isDark} />
         </div>
+        <p className={`text-xs mb-4 ${dimText}`}>
+          Click any cell to edit it inline.{" "}
+          {onPreviewPaper && "Click an "}
+          {onPreviewPaper && <span className="text-rose-500 font-mono">id</span>}
+          {onPreviewPaper && " to preview the paper PDF."}
+        </p>
 
         {loading && (
           <div className={`flex items-center gap-2 text-xs ${dimText}`}>
@@ -240,11 +606,33 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
         )}
 
         {!loading && rows.length > 0 && (
+          <>
+            {/* Hidden column chips */}
+            {collapsedCols.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {collapsedCols.map((col) => (
+                  <button
+                    key={col}
+                    type="button"
+                    onClick={() => toggleCol(col)}
+                    className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                      isDark
+                        ? "border-white/15 text-white/40 hover:text-white/70 hover:border-white/30"
+                        : "border-black/10 text-black/40 hover:text-black/60 hover:border-black/20"
+                    }`}
+                  >
+                    <Icon icon="mdi:eye-outline" className="w-3 h-3" />
+                    {col}
+                  </button>
+                ))}
+              </div>
+            )}
+
           <div className={`rounded-lg border ${border} overflow-x-auto`}>
-            <table className="w-full text-xs text-left">
+            <table className="table-auto min-w-max text-xs text-left">
               <thead>
                 <tr className={`border-b ${border} ${cardBg}`}>
-                  {columns.map((col) => {
+                  {visibleCols.map((col) => {
                     const def = SCHEMA[selectedTable].columns.find((c) => c.name === col);
                     const isPk = def && "pk" in def && def.pk;
                     const isFk = def && "fk" in def && (def as { fk?: string }).fk;
@@ -254,10 +642,18 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
                         key={col}
                         className={`px-3 py-2 font-mono font-semibold whitespace-nowrap ${c.heading}`}
                       >
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1.5">
                           {col}
                           {isPk && <span className={`text-[9px] px-1 rounded ${c.badge}`}>PK</span>}
                           {isFk && <span className="text-[9px] px-1 rounded opacity-50">FK</span>}
+                          <button
+                            type="button"
+                            onClick={() => toggleCol(col)}
+                            title={`Hide ${col}`}
+                            className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                          >
+                            <Icon icon="mdi:eye-off-outline" className="w-3 h-3" />
+                          </button>
                         </span>
                       </th>
                     );
@@ -268,20 +664,51 @@ export function MainDatabase({ theme }: MainDatabaseProps) {
                 {rows.map((row, i) => (
                   <tr
                     key={i}
-                    className={`border-b last:border-0 ${border} ${
+                    className={`border-b last:border-0 ${border} group ${
                       isDark ? "hover:bg-white/[0.02]" : "hover:bg-black/[0.02]"
                     } transition-colors`}
                   >
-                    {columns.map((col) => (
-                      <td key={col} className={`px-3 py-2 align-top max-w-xs`}>
-                        <CellValue value={row[col]} />
+                    {visibleCols.map((col) => {
+                      const isPaperIdClick =
+                        onPreviewPaper &&
+                        ((selectedTable === "papers" && col === "id") ||
+                         (selectedTable === "audio_files" && col === "paper_id" && row[col] != null));
+                      const paperId = isPaperIdClick
+                        ? Number(col === "id" ? row["id"] : row["paper_id"])
+                        : null;
+                      const paperTitle = isPaperIdClick && selectedTable === "papers"
+                        ? String(row["title"] ?? "")
+                        : "";
+                      return (
+                      <td key={col} className={cellCls(col)}>
+                        {isPaperIdClick ? (
+                          <button
+                            type="button"
+                            onClick={() => onPreviewPaper!(paperId!, paperTitle)}
+                            className="font-mono text-xs text-rose-500 hover:underline tabular-nums"
+                            title="Preview PDF"
+                          >
+                            {String(row[col])}
+                          </button>
+                        ) : (
+                          <EditableCell
+                            value={row[col]}
+                            isEditable={EDITABLE_COLS[selectedTable]?.has(col) ?? false}
+                            isDark={isDark}
+                            multiline={col === "abstract" || col === "query"}
+                            selectOptions={getCellSelectOpts(col, row)}
+                            onSave={(val) => handleCellSave(i, col, val)}
+                          />
+                        )}
                       </td>
-                    ))}
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
     </div>

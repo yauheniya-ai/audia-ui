@@ -10,7 +10,6 @@ export type IconDef =
   | { kind: 'img';  src: string;  alt: string };
 
 // ─────────────────────────────────────────── LLM providers
-// Only providers that are implemented in the backend (openai, anthropic).
 // Expand this list as new backends are added.
 
 export const PROVIDERS = ['Anthropic', 'OpenAI'] as const;
@@ -48,7 +47,7 @@ export const STT_MODELS = [
 
 export const TTS_BACKENDS = [
   'edge-tts',   // free, no API key required
-  'kokoro',     // local; pip install audia[kokoro]
+  'kokoro',     // local; pip install "audia[kokoro]"
   'openai',     // requires OpenAI API key
 ] as const;
 export type TTSBackend = (typeof TTS_BACKENDS)[number];
