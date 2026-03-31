@@ -116,7 +116,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        {tab === "configuration" && (
+        <div className={tab === "configuration" ? "" : "hidden"}>
           <MainConfiguration
             theme={theme}
             sttModel={sttModel}         setSttModel={setSttModel}
@@ -130,8 +130,8 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             saving={configSaving}
             saved={configSaved}
           />
-        )}
-        {tab === "convert" && (
+        </div>
+        <div className={tab === "convert" ? "" : "hidden"}>
           <MainConvert
             theme={theme}
             ttsBackend={ttsBackend}
@@ -141,8 +141,8 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}
           />
-        )}
-        {tab === "research" && (
+        </div>
+        <div className={tab === "research" ? "" : "hidden"}>
           <MainResearch
             theme={theme}
             llm1Provider={llm1Provider}
@@ -152,15 +152,15 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}
           />
-        )}
-        {tab === "database" && (
+        </div>
+        <div className={tab === "database" ? "" : "hidden"}>
           <MainDatabase
             theme={theme}
             onPreviewPaper={(paperId, title) =>
               setLivePreviewPdf({ url: `/api/library/pdf/${paperId}`, title: title || `Paper #${paperId}` })
             }
           />
-        )}
+        </div>
       </div>
 
       {/* Audio player (full width, pinned to bottom) */}

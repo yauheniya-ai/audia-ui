@@ -42,6 +42,7 @@ export function ConversionProgress({
   jobId,
   theme,
   onDone,
+  onStopped,
   jobApiBase,
   stages,
   onSetPreview,
@@ -49,6 +50,7 @@ export function ConversionProgress({
   jobId: string;
   theme: Theme;
   onDone: (result: ConvertResult) => void;
+  onStopped?: () => void;
   jobApiBase: string;
   stages: typeof CONVERT_STAGES;
   onSetPreview: (p: { url: string; title: string } | null) => void;
@@ -80,13 +82,14 @@ export function ConversionProgress({
           onDone(data.result);
         } else if (data.status === "error" || data.status === "cancelled") {
           clearInterval(interval);
+          onStopped?.();
         }
       } catch {
         // keep polling
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [jobId, onDone, jobApiBase, onSetPreview]);
+  }, [jobId, onDone, onStopped, jobApiBase, onSetPreview]);
 
   useEffect(() => {
     const el = logRef.current;
@@ -97,23 +100,10 @@ export function ConversionProgress({
 
   const currentStageIdx = stages.findIndex((s) => s.key === job.stage);
 
-  const handleCancel = async () => {
-    await fetch(`${jobApiBase}/jobs/${jobId}`, { method: "DELETE" });
-  };
-
   return (
     <div className="mt-6 space-y-4">
       <div className="flex items-center gap-3">
         <span className={`text-xs flex-1 ${dimText}`}>{job.stage_label}</span>
-        {job.status === "running" && (
-          <button
-            onClick={handleCancel}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rose-500 border border-rose-500/30 hover:bg-rose-500/10 transition-colors"
-          >
-            <Icon icon="mdi:cancel" className="w-3.5 h-3.5" />
-            Cancel
-          </button>
-        )}
       </div>
 
       <div className={`h-1 rounded-full ${isDark ? "bg-white/10" : "bg-black/10"} overflow-hidden`}>
@@ -431,6 +421,7 @@ export function MainConvert({
   const [uploading,      setUploading]      = useState(false);
   const [jobId,          setJobId]          = useState<string | null>(null);
   const [convertResult,  setConvertResult]  = useState<ConvertResult | null>(null);
+  const [jobRunning,     setJobRunning]     = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -448,6 +439,7 @@ export function MainConvert({
     setUploading(true);
     setJobId(null);
     setConvertResult(null);
+    setJobRunning(false);
 
     const form = new FormData();
     form.append("file",         file);
@@ -458,6 +450,7 @@ export function MainConvert({
       const res  = await fetch("/api/convert/enqueue", { method: "POST", body: form });
       const data = await res.json();
       setJobId(data.job_id);
+      setJobRunning(true);
     } catch (err) {
       console.error(err);
     } finally {
@@ -468,6 +461,7 @@ export function MainConvert({
   const handleConvertDone = useCallback(
     (result: ConvertResult) => {
       setConvertResult(result);
+      setJobRunning(false);
       onConverted();
       setActiveAudio({
         id: result.audio_id,
@@ -481,6 +475,12 @@ export function MainConvert({
     },
     [onConverted, setActiveAudio]
   );
+
+  const handleCancel = async () => {
+    if (!jobId) return;
+    await fetch(`/api/convert/jobs/${jobId}`, { method: "DELETE" });
+    setJobRunning(false);
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -522,8 +522,8 @@ export function MainConvert({
           className={`w-10 h-10 ${file ? "text-rose-500" : dimText}`}
         />
         {file ? (
-          <div className="text-center">
-            <p className="text-sm text-rose-500">{file.name}</p>
+          <div className="text-center max-w-full">
+            <p className="text-sm text-rose-500 break-words whitespace-normal">{file.name}</p>
             <p className={`text-xs ${dimText} mt-1`}>{(file.size / 1024).toFixed(0)} KB</p>
           </div>
         ) : (
@@ -534,28 +534,40 @@ export function MainConvert({
         )}
       </div>
 
-      {/* Convert button */}
-      {file && !jobId && (
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-500 rounded text-sm transition-colors disabled:opacity-50"
-        >
-          {uploading ? (
-            <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
-          ) : (
-            <Icon icon="mdi:play" className="w-4 h-4" />
+      {/* Convert button + cancel */}
+      {file && !convertResult && (
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            onClick={handleUpload}
+            disabled={uploading || jobRunning}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-500 rounded text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {uploading || jobRunning ? (
+              <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
+            ) : (
+              <Icon icon="mdi:play" className="w-4 h-4" />
+            )}
+            {uploading ? "Uploading…" : jobRunning ? "Converting…" : "Convert to audio"}
+          </button>
+          {jobRunning && jobId && (
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded text-sm text-rose-500 border border-rose-500/30 hover:bg-rose-500/10 transition-colors"
+            >
+              <Icon icon="mdi:cancel" className="w-4 h-4" />
+              Cancel
+            </button>
           )}
-          {uploading ? "Uploading…" : "Convert to audio"}
-        </button>
+        </div>
       )}
-      
+
       {/* Progress */}
       {jobId && !convertResult && (
         <ConversionProgress
           jobId={jobId}
           theme={theme}
           onDone={handleConvertDone}
+          onStopped={() => setJobRunning(false)}
           jobApiBase="/api/convert"
           stages={CONVERT_STAGES}
           onSetPreview={setLivePreviewPdf}
@@ -564,9 +576,9 @@ export function MainConvert({
 
       {/* Done message */}
       {convertResult && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-lime-500">
-          <Icon icon="mdi:check-circle" className="w-4 h-4" />
-          <span>{convertResult.title} — {convertResult.num_pages} pages converted. See player below.</span>
+        <div className="mt-4 flex items-start gap-2 text-xs text-lime-500">
+          <Icon icon="mdi:check-circle" className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="break-words">{convertResult.title} — {convertResult.num_pages} pages converted. See player below.</span>
         </div>
       )}
       {/* Reset */}
