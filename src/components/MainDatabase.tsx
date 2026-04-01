@@ -24,7 +24,7 @@ const SCHEMA = {
   },
   audio_files: {
     icon: "mdi:music-note",
-    color: "violet",
+    color: "lime",
     columns: [
       { name: "id",               type: "INTEGER", pk: true  },
       { name: "paper_id",         type: "INTEGER", fk: "papers.id" },
@@ -48,7 +48,7 @@ const SCHEMA = {
   },
   user_settings: {
     icon: "mdi:cog-outline",
-    color: "amber",
+    color: "purple",
     columns: [
       { name: "key",   type: "VARCHAR(128)", pk: true },
       { name: "value", type: "TEXT"                   },
@@ -108,9 +108,9 @@ const NULLABLE_COLS = new Set(["arxiv_id", "pdf_url", "pdf_path"]);
 
 const COLORS: Record<string, { border: string; heading: string; badge: string; dimBadge: string }> = {
   rose:   { border: "border-rose-500/40",   heading: "text-rose-500",   badge: "bg-rose-500/15 text-rose-500",   dimBadge: "bg-rose-500/10 text-rose-300/60"   },
-  violet: { border: "border-violet-500/40", heading: "text-violet-500", badge: "bg-violet-500/15 text-violet-500", dimBadge: "bg-violet-500/10 text-violet-300/60" },
+  lime:   { border: "border-lime-500/40",   heading: "text-lime-500",   badge: "bg-lime-500/15 text-lime-500",   dimBadge: "bg-lime-500/10 text-lime-300/60"   },
   cyan:   { border: "border-cyan-500/40",   heading: "text-cyan-500",   badge: "bg-cyan-500/15 text-cyan-500",   dimBadge: "bg-cyan-500/10 text-cyan-300/60"   },
-  amber:  { border: "border-amber-500/40",  heading: "text-amber-500",  badge: "bg-amber-500/15 text-amber-500", dimBadge: "bg-amber-500/10 text-amber-300/60"  },
+  purple: { border: "border-purple-500/40", heading: "text-purple-500", badge: "bg-purple-500/15 text-purple-500", dimBadge: "bg-purple-500/10 text-purple-300/60" },
 };
 
 // ────────────────────────────────── TableSelect (custom, no native)

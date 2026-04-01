@@ -130,6 +130,7 @@ export function MainResearch({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         arxiv_ids:    Array.from(selectedIds),
+        query:        normalizedQuery ?? query,
         llm_provider: llm1Provider,
         llm_model:    llm1Model,
         tts_backend:  ttsBackend,
