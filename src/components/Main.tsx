@@ -135,6 +135,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
           <MainConvert
             theme={theme}
             ttsBackend={ttsBackend}
+            ttsVoice={ttsVoice}
             llm1Provider={llm1Provider}
             llm1Model={llm1Model}
             onConverted={onConverted}
@@ -148,6 +149,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             llm1Provider={llm1Provider}
             llm1Model={llm1Model}
             ttsBackend={ttsBackend}
+            ttsVoice={ttsVoice}
             onConverted={onConverted}
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}

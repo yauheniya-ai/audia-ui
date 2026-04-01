@@ -30,6 +30,7 @@ export interface MainResearchProps {
   llm1Provider: LLMProvider;
   llm1Model: string;
   ttsBackend: string;
+  ttsVoice: string;
   onConverted: () => void;
   setActiveAudio: (a: AudioEntry | null) => void;
   setLivePreviewPdf: (p: LivePreview | null) => void;
@@ -40,6 +41,7 @@ export function MainResearch({
   llm1Provider,
   llm1Model,
   ttsBackend,
+  ttsVoice,
   onConverted,
   setActiveAudio,
   setLivePreviewPdf,
@@ -131,6 +133,7 @@ export function MainResearch({
         llm_provider: llm1Provider,
         llm_model:    llm1Model,
         tts_backend:  ttsBackend,
+        tts_voice:    ttsVoice,
       }),
     });
     const data = await res.json();

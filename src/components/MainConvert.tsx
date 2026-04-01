@@ -397,6 +397,7 @@ export function AudioPlayer({
 export interface MainConvertProps {
   theme: Theme;
   ttsBackend: string;
+  ttsVoice: string;
   llm1Provider: LLMProvider;
   llm1Model: string;
   onConverted: () => void;
@@ -407,6 +408,7 @@ export interface MainConvertProps {
 export function MainConvert({
   theme,
   ttsBackend,
+  ttsVoice,
   llm1Provider,
   llm1Model,
   onConverted,
@@ -444,6 +446,7 @@ export function MainConvert({
     const form = new FormData();
     form.append("file",         file);
     form.append("tts_backend",  ttsBackend);
+    form.append("voice",        ttsVoice);
     form.append("llm_provider", llm1Provider);
     form.append("llm_model",    llm1Model);
     try {

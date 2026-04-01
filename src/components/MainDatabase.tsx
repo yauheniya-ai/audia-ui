@@ -295,7 +295,7 @@ function SchemaCard({ name, isDark }: { name: TableName; isDark: boolean }) {
   );
 }
 
-function CellValue({ value }: { value: unknown }) {
+function CellValue({ value, isEditable, isDark }: { value: unknown; isEditable?: boolean; isDark?: boolean }) {
   if (value === null || value === undefined) {
     return <span className="opacity-30 italic">null</span>;
   }
@@ -307,6 +307,14 @@ function CellValue({ value }: { value: unknown }) {
     );
   }
   const s = String(value);
+  if (s === "" && isEditable) {
+    // Empty-string cells need a visible target so the user can click to edit
+    return (
+      <span className={`text-xs italic ${isDark ? "text-white/20" : "text-black/20"}`}>
+        (empty)
+      </span>
+    );
+  }
   return <span className="font-mono text-xs break-all">{s}</span>;
 }
 
@@ -425,7 +433,7 @@ function EditableCell({
     <div
       onClick={startEdit}
       className={[
-        "font-mono text-xs leading-relaxed transition-all rounded",
+        "font-mono text-xs leading-relaxed transition-all rounded min-h-[1.25rem]",
         isEditable
           ? [
               "cursor-text px-1.5 py-0.5 -mx-1.5 -my-0.5",
@@ -440,7 +448,7 @@ function EditableCell({
     >
       {saving
         ? <Icon icon="mdi:loading" className="w-3 h-3 animate-spin opacity-50" />
-        : <CellValue value={value} />}
+        : <CellValue value={value} isEditable={isEditable} isDark={isDark} />}
     </div>
   );
 }
