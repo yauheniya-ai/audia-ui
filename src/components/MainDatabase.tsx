@@ -434,6 +434,7 @@ function EditableCell({
       onClick={startEdit}
       className={[
         "font-mono text-xs leading-relaxed transition-all rounded min-h-[1.25rem]",
+        multiline ? "max-h-24 overflow-y-auto" : "",
         isEditable
           ? [
               "cursor-text px-1.5 py-0.5 -mx-1.5 -my-0.5",
