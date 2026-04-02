@@ -57,6 +57,7 @@ export function MainResearch({
   const [results,        setResults]        = useState<ArxivResult[]>([]);
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set());
   const [researchJobs,   setResearchJobs]   = useState<Array<{ arxiv_id: string; job_id: string }>>([]);
+  const [runningJobIds,  setRunningJobIds]  = useState<Set<string>>(new Set());
   const [recording,      setRecording]      = useState(false);
   const [normalizing,    setNormalizing]    = useState(false);
   const [normalizedQuery, setNormalizedQuery] = useState<string | null>(null);
@@ -139,9 +140,23 @@ export function MainResearch({
     });
     const data = await res.json();
     if (data.jobs) {
-      setResearchJobs((prev) => [...prev, ...data.jobs]);
+      const newJobs = data.jobs as Array<{ arxiv_id: string; job_id: string }>;
+      setResearchJobs((prev) => [...prev, ...newJobs]);
+      setRunningJobIds((prev) => {
+        const next = new Set(prev);
+        newJobs.forEach((j) => next.add(j.job_id));
+        return next;
+      });
       setSelectedIds(new Set());
     }
+  };
+
+  const removeRunning = (jobId: string) =>
+    setRunningJobIds((prev) => { const n = new Set(prev); n.delete(jobId); return n; });
+
+  const handleCancelJob = async (jobId: string) => {
+    await fetch(`/api/research/jobs/${jobId}`, { method: "DELETE" });
+    removeRunning(jobId);
   };
 
   const startRecording = async () => {
@@ -338,14 +353,32 @@ export function MainResearch({
           </div>
 
           {/* Convert selected */}
-          {selectedIds.size > 0 && (
-            <button
-              onClick={handleResearchEnqueue}
-              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-500 rounded text-sm transition-colors"
-            >
-              <Icon icon="mdi:headphones" className="w-4 h-4" />
-              Convert {selectedIds.size} selected paper{selectedIds.size > 1 ? "s" : ""} to audio
-            </button>
+          {(selectedIds.size > 0 || runningJobIds.size > 0) && (
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={handleResearchEnqueue}
+                disabled={runningJobIds.size > 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-500 rounded text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {runningJobIds.size > 0 ? (
+                  <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Icon icon="mdi:headphones" className="w-4 h-4" />
+                )}
+                {runningJobIds.size > 0
+                  ? "Converting\u2026"
+                  : `Convert ${selectedIds.size} selected paper${selectedIds.size > 1 ? "s" : ""} to audio`}
+              </button>
+              {runningJobIds.size > 0 && (
+                <button
+                  onClick={() => { runningJobIds.forEach((id) => handleCancelJob(id)); }}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded text-sm text-rose-500 border border-rose-500/30 hover:bg-rose-500/10 transition-colors"
+                >
+                  <Icon icon="mdi:cancel" className="w-4 h-4" />
+                  Cancel
+                </button>
+              )}
+            </div>
           )}
 
           {/* Research job progress panels */}
@@ -356,6 +389,7 @@ export function MainResearch({
                 jobId={job_id}
                 theme={theme}
                 onDone={(result) => {
+                  removeRunning(job_id);
                   onConverted();
                   setActiveAudio({
                     id: result.audio_id,
@@ -367,6 +401,7 @@ export function MainResearch({
                     created_at: new Date().toISOString(),
                   });
                 }}
+                onStopped={() => removeRunning(job_id)}
                 jobApiBase="/api/research"
                 stages={RESEARCH_STAGES}
                 onSetPreview={setLivePreviewPdf}

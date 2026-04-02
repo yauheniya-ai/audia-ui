@@ -87,8 +87,8 @@ function CustomSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-1 rounded border px-2 py-1.5 text-xs transition-colors
-          ${isDark ? "bg-transparent text-white" : "bg-transparent text-black"}
+        className={`z-40 w-full flex items-center justify-between gap-1 rounded border px-2 py-1.5 text-xs transition-colors
+          ${isDark ? "bg-zinc-800 text-white" : "bg-stone-100 text-black"}
           ${accentBorder} ${accentHoverBorder}`}
       >
         <span className="truncate">{value}</span>
@@ -100,7 +100,7 @@ function CustomSelect({
       {open && (
         <div
           className={`absolute z-50 top-full left-0 right-0 mt-1 rounded border shadow-lg overflow-hidden ${
-            isDark ? "bg-zinc-900 border-white/10" : "bg-white border-black/10"
+            isDark ? "bg-zinc-900/10 backdrop-blur-sm border-white/10" : "bg-white/95 border-black/10"
           }`}
         >
           {options.map((opt) => (
@@ -360,7 +360,7 @@ export function MainConfiguration({
         </svg>
 
         {/* ── Cards — 4-col grid ── */}
-        <div className="grid gap-6 relative z-10">
+        <div className="grid gap-6 relative">
 
           {/* Row 1 — STT + Text: full width, each 50% */}
           <div className="grid grid-cols-2 gap-4">
