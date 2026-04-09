@@ -1,1 +1,17 @@
 # <img src="https://api.iconify.design/streamline-freehand:help-headphones-customer-support-human.svg" width="24" height="24"> audia — turn your ideas into audio
+
+**audia** is an agentic [Python package](https://pypi.org/project/audia/) that converts PDFs — academic papers, reports, regulations — into podcast-style audio files.
+It uses an LLM to rewrite content into natural spoken language (math in plain English, tables as sentences, no citations) before passing it to a TTS engine, so the result actually sounds good when read aloud.
+
+
+## Quick Start
+
+```bash
+pip install audia
+audia serve
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/yauheniya-ai/audia/main/docs/images/ScreenRecordingAudia.webp" width="100%" />
+  <em>The audia UI</em>
+</p>
