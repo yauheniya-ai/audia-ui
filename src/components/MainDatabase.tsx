@@ -459,10 +459,11 @@ function EditableCell({
 export interface MainDatabaseProps {
   theme: Theme;
   onPreviewPaper?: (paperId: number, title: string) => void;
+  onRowSaved?: () => void;
   activeProject: string | null;
 }
 
-export function MainDatabase({ theme, onPreviewPaper, activeProject }: MainDatabaseProps) {
+export function MainDatabase({ theme, onPreviewPaper, onRowSaved, activeProject }: MainDatabaseProps) {
   const pqs = activeProject ? `?project=${encodeURIComponent(activeProject)}` : "";
   const isDark  = theme === "dark";
   const border  = isDark ? "border-white/10" : "border-black/10";
@@ -473,6 +474,16 @@ export function MainDatabase({ theme, onPreviewPaper, activeProject }: MainDatab
   const [rows,          setRows]          = useState<Record<string, unknown>[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
+
+  const refetchRows = useCallback(() => {
+    fetch(TABLE_ENDPOINTS[selectedTable] + pqs)
+      .then((r) => r.json())
+      .then((data: Record<string, unknown[]>) => {
+        const key = TABLE_ROOT_KEY[selectedTable];
+        setRows((data[key] ?? []) as Record<string, unknown>[]);
+      })
+      .catch(console.error);
+  }, [selectedTable, pqs]);
 
   useEffect(() => {
     setRows([]);
@@ -516,8 +527,10 @@ export function MainDatabase({ theme, onPreviewPaper, activeProject }: MainDatab
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    setRows((prev) => prev.map((r, i) => (i === rowIdx ? { ...r, [col]: fieldVal } : r)));
-  }, [rows, selectedTable]);
+    // Re-fetch rows so all derived fields (e.g. file_path after rename) stay in sync.
+    refetchRows();
+    onRowSaved?.();
+  }, [rows, selectedTable, refetchRows, onRowSaved]);
 
   const getCellSelectOpts = (col: string, row: Record<string, unknown>): readonly string[] | undefined => {
     if (col === "tts_backend") return TTS_BACKENDS;

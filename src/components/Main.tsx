@@ -165,6 +165,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             onPreviewPaper={(paperId, title) =>
               setLivePreviewPdf({ url: `/api/library/pdf/${paperId}${pqs}`, title: title || `Paper #${paperId}` })
             }
+            onRowSaved={onConverted}
             activeProject={activeProject}
           />
         </div>

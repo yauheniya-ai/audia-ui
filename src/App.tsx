@@ -70,8 +70,9 @@ function App() {
   };
 
   // Derive the preview to show (library paper takes precedence when explicitly selected)
+  const pqs = activeProject ? `?project=${encodeURIComponent(activeProject)}` : "";
   const activePreview: LivePreview | null = selectedPaper
-    ? { url: `/api/library/pdf/${selectedPaper.id}`, title: selectedPaper.title }
+    ? { url: `/api/library/pdf/${selectedPaper.id}${pqs}`, title: selectedPaper.title }
     : livePreviewPdf;
 
   return (
