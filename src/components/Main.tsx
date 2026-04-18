@@ -14,6 +14,7 @@ interface MainProps {
   setActiveAudio: (a: AudioEntry | null) => void;
   onConverted: () => void;
   setLivePreviewPdf: (p: LivePreview | null) => void;
+  activeProject: string | null;
 }
 
 type Tab = "configuration" | "convert" | "research" | "database";
@@ -26,7 +27,8 @@ type Tab = "configuration" | "convert" | "research" | "database";
 
 // ────────────────────────────────── Main component
 
-export default function Main({ theme, activeAudio, setActiveAudio, onConverted, setLivePreviewPdf }: MainProps) {
+export default function Main({ theme, activeAudio, setActiveAudio, onConverted, setLivePreviewPdf, activeProject }: MainProps) {
+  const pqs = activeProject ? `?project=${encodeURIComponent(activeProject)}` : "";
   const isDark  = theme === "dark";
   const border  = isDark ? "border-white/10" : "border-black/10";
   const dimText = isDark ? "text-white/40"   : "text-black/40";
@@ -47,7 +49,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
 
   // Load persisted config on mount
   useEffect(() => {
-    fetch("/api/settings")
+    fetch(`/api/settings${pqs}`)
       .then((r) => r.json())
       .then((d: Record<string, string>) => {
         if (d.stt_model)     setSttModel(d.stt_model);
@@ -64,7 +66,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
   const handleSaveConfig = async () => {
     setConfigSaving(true);
     try {
-      await fetch("/api/settings", {
+      await fetch(`/api/settings${pqs}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,6 +143,7 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             onConverted={onConverted}
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}
+            activeProject={activeProject}
           />
         </div>
         <div className={tab === "research" ? "" : "hidden"}>
@@ -153,14 +156,16 @@ export default function Main({ theme, activeAudio, setActiveAudio, onConverted, 
             onConverted={onConverted}
             setActiveAudio={setActiveAudio}
             setLivePreviewPdf={setLivePreviewPdf}
+            activeProject={activeProject}
           />
         </div>
         <div className={tab === "database" ? "" : "hidden"}>
           <MainDatabase
             theme={theme}
             onPreviewPaper={(paperId, title) =>
-              setLivePreviewPdf({ url: `/api/library/pdf/${paperId}`, title: title || `Paper #${paperId}` })
+              setLivePreviewPdf({ url: `/api/library/pdf/${paperId}${pqs}`, title: title || `Paper #${paperId}` })
             }
+            activeProject={activeProject}
           />
         </div>
       </div>

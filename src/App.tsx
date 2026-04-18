@@ -46,6 +46,12 @@ function App() {
   const [livePreviewPdf, setLivePreviewPdf] = useState<LivePreview | null>(null);
   const [activeAudio, setActiveAudio] = useState<AudioEntry | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeProject, setActiveProject] = useState<string | null>(null);
+
+  const handleSelectProject = (name: string | null) => {
+    setActiveProject(name);
+    setRefreshKey((k) => k + 1);
+  };
 
   const isDark = theme === "dark";
   const bg = isDark ? "bg-black text-white" : "bg-white text-black";
@@ -70,7 +76,12 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden font-mono ${bg}`}>
-      <Header theme={theme} toggleTheme={() => setTheme(isDark ? "light" : "dark")} />
+      <Header
+        theme={theme}
+        toggleTheme={() => setTheme(isDark ? "light" : "dark")}
+        activeProject={activeProject}
+        onSelectProject={handleSelectProject}
+      />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           theme={theme}
@@ -79,6 +90,7 @@ function App() {
           setSelectedPaper={handleSelectPaper}
           setActiveAudio={setActiveAudio}
           onDeleted={refreshLibrary}
+          activeProject={activeProject}
         />
         <Main
           theme={theme}
@@ -86,6 +98,7 @@ function App() {
           setActiveAudio={setActiveAudio}
           onConverted={refreshLibrary}
           setLivePreviewPdf={handleSetLivePreview}
+          activeProject={activeProject}
         />
         {activePreview && (
           <PreviewPanel

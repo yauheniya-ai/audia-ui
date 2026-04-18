@@ -459,9 +459,11 @@ function EditableCell({
 export interface MainDatabaseProps {
   theme: Theme;
   onPreviewPaper?: (paperId: number, title: string) => void;
+  activeProject: string | null;
 }
 
-export function MainDatabase({ theme, onPreviewPaper }: MainDatabaseProps) {
+export function MainDatabase({ theme, onPreviewPaper, activeProject }: MainDatabaseProps) {
+  const pqs = activeProject ? `?project=${encodeURIComponent(activeProject)}` : "";
   const isDark  = theme === "dark";
   const border  = isDark ? "border-white/10" : "border-black/10";
   const dimText = isDark ? "text-white/40"   : "text-black/40";
@@ -476,7 +478,7 @@ export function MainDatabase({ theme, onPreviewPaper }: MainDatabaseProps) {
     setRows([]);
     setError(null);
     setLoading(true);
-    fetch(TABLE_ENDPOINTS[selectedTable])
+    fetch(TABLE_ENDPOINTS[selectedTable] + pqs)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -507,7 +509,7 @@ export function MainDatabase({ theme, onPreviewPaper }: MainDatabaseProps) {
       fieldVal = rawVal;
     }
 
-    const res = await fetch(url, {
+    const res = await fetch(url + pqs, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ [col]: fieldVal }),

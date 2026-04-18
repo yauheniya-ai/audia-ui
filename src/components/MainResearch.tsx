@@ -34,6 +34,7 @@ export interface MainResearchProps {
   onConverted: () => void;
   setActiveAudio: (a: AudioEntry | null) => void;
   setLivePreviewPdf: (p: LivePreview | null) => void;
+  activeProject: string | null;
 }
 
 export function MainResearch({
@@ -45,6 +46,7 @@ export function MainResearch({
   onConverted,
   setActiveAudio,
   setLivePreviewPdf,
+  activeProject,
 }: MainResearchProps) {
   const isDark   = theme === "dark";
   const dimText  = isDark ? "text-white/40" : "text-black/40";
@@ -136,6 +138,7 @@ export function MainResearch({
         llm_model:    llm1Model,
         tts_backend:  ttsBackend,
         tts_voice:    ttsVoice,
+        ...(activeProject ? { project: activeProject } : {}),
       }),
     });
     const data = await res.json();

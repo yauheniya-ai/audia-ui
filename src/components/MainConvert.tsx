@@ -403,6 +403,7 @@ export interface MainConvertProps {
   onConverted: () => void;
   setActiveAudio: (a: AudioEntry | null) => void;
   setLivePreviewPdf: (p: LivePreview | null) => void;
+  activeProject: string | null;
 }
 
 export function MainConvert({
@@ -414,6 +415,7 @@ export function MainConvert({
   onConverted,
   setActiveAudio,
   setLivePreviewPdf,
+  activeProject,
 }: MainConvertProps) {
   const isDark   = theme === "dark";
   const dimText  = isDark ? "text-white/40" : "text-black/40";
@@ -449,6 +451,7 @@ export function MainConvert({
     form.append("voice",        ttsVoice);
     form.append("llm_provider", llm1Provider);
     form.append("llm_model",    llm1Model);
+    if (activeProject) form.append("project", activeProject);
     try {
       const res  = await fetch("/api/convert/enqueue", { method: "POST", body: form });
       const data = await res.json();

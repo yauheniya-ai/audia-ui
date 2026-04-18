@@ -9,6 +9,7 @@ interface SidebarProps {
   setSelectedPaper: (p: Paper | null) => void;
   setActiveAudio: (a: AudioEntry | null) => void;
   onDeleted: () => void;
+  activeProject: string | null;
 }
 
 interface ConfirmState {
@@ -24,7 +25,9 @@ export default function Sidebar({
   setSelectedPaper,
   setActiveAudio,
   onDeleted,
+  activeProject,
 }: SidebarProps) {
+  const pqs = activeProject ? `?project=${encodeURIComponent(activeProject)}` : "";
   const [papers, setPapers] = useState<Paper[]>([]);
   const [audioMap, setAudioMap] = useState<Record<number, AudioEntry[]>>({});
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -40,8 +43,8 @@ export default function Sidebar({
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch("/api/library/papers").then((r) => r.json()),
-      fetch("/api/library/audio").then((r) => r.json()),
+      fetch(`/api/library/papers${pqs}`).then((r) => r.json()),
+      fetch(`/api/library/audio${pqs}`).then((r) => r.json()),
     ])
       .then(([papersData, audioData]) => {
         setPapers(papersData.papers ?? []);
@@ -59,14 +62,14 @@ export default function Sidebar({
   }, [refreshKey]);
 
   const handleDeletePaper = async (paperId: number) => {
-    await fetch(`/api/library/papers/${paperId}`, { method: "DELETE" });
+    await fetch(`/api/library/papers/${paperId}${pqs}`, { method: "DELETE" });
     setConfirm(null);
     if (selectedPaper?.id === paperId) setSelectedPaper(null);
     onDeleted();
   };
 
   const handleDeleteAudio = async (audioId: number) => {
-    await fetch(`/api/library/audio/${audioId}`, { method: "DELETE" });
+    await fetch(`/api/library/audio/${audioId}${pqs}`, { method: "DELETE" });
     setConfirm(null);
     onDeleted();
   };
