@@ -80,8 +80,6 @@ function App() {
       <Header
         theme={theme}
         toggleTheme={() => setTheme(isDark ? "light" : "dark")}
-        activeProject={activeProject}
-        onSelectProject={handleSelectProject}
       />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -92,6 +90,7 @@ function App() {
           setActiveAudio={setActiveAudio}
           onDeleted={refreshLibrary}
           activeProject={activeProject}
+          onSelectProject={handleSelectProject}
         />
         <Main
           theme={theme}

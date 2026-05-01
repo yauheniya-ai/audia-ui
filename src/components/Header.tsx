@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import type { Theme } from "../App";
-import DatabaseSelector from "./DatabaseSelector";
-import type { ProjectInfo } from "./DatabaseSelector";
 
 interface HeaderProps {
   theme: Theme;
   toggleTheme: () => void;
-  activeProject: string | null;
-  onSelectProject: (name: string | null) => void;
 }
 
-export default function Header({ theme, toggleTheme, activeProject, onSelectProject }: HeaderProps) {
+export default function Header({ theme, toggleTheme }: HeaderProps) {
   const [copied, setCopied] = useState(false);
   const isDark = theme === "dark";
 
@@ -56,13 +52,6 @@ export default function Header({ theme, toggleTheme, activeProject, onSelectProj
             />
         </button>
       </div>
-
-      {/* Project selector */}
-      <DatabaseSelector
-        theme={theme}
-        activeProject={activeProject}
-        onSelect={(p: ProjectInfo | null) => onSelectProject(p?.name ?? null)}
-      />
 
       {/* Theme toggle */}
       <button

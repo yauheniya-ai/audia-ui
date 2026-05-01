@@ -130,28 +130,28 @@ export default function DatabaseSelector({ theme, activeProject, onSelect }: Pro
 
   // ── theme-aware classes ───────────────────────────────────────────────────
   const modalBg    = isDark ? "bg-zinc-900 border-zinc-700"            : "bg-white border-black";
-  const headerBg   = "bg-purple-700";
+  const headerBg   = "bg-cyan-700";
   const rowHover   = isDark ? "hover:bg-white/5"                       : "hover:bg-black/5";
-  const activeRow  = isDark ? "bg-purple-900/40 border-l-4 border-l-purple-500" : "bg-purple-50 border-l-4 border-l-purple-500";
+  const activeRow  = isDark ? "bg-cyan-900/40 border-l-4 border-l-cyan-500" : "bg-cyan-50 border-l-4 border-l-cyan-500";
   const textMain   = isDark ? "text-white"  : "text-black";
   const textDim    = isDark ? "text-white/50" : "text-black/50";
   const divider    = isDark ? "border-white/10" : "border-black/10";
   const inputCls   = isDark
-    ? "bg-zinc-800 border-purple-600 text-white placeholder-white/30 focus:border-purple-400"
-    : "bg-white border-purple-300 text-black placeholder-black/30 focus:border-purple-500";
-  const addFormBg  = isDark ? "bg-purple-950/40 border-white/10" : "bg-purple-50/60 border-black/10";
+    ? "bg-zinc-800 border-cyan-600 text-white placeholder-white/30 focus:border-cyan-400"
+    : "bg-white border-cyan-300 text-black placeholder-black/30 focus:border-cyan-500";
+  const addFormBg  = isDark ? "bg-cyan-950/40 border-white/10" : "bg-cyan-50/60 border-black/10";
 
   return (
     <>
       {/* Trigger */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs font-bold font-mono text-white/70 hover:text-white transition-colors border border-white/20 rounded px-2 py-1 bg-white/5 hover:bg-white/10"
-        title="Switch project"
+        className="flex items-center gap-1 text-xs font-bold font-mono text-white/70 hover:text-white transition-colors border border-white/20 rounded px-2 py-1 bg-white/5 hover:bg-white/10 max-w-[130px] min-w-0"
+        title={label}
       >
-        <Icon icon="mdi:database" className="w-3.5 h-3.5 text-purple-400" />
-        <span className="text-purple-300">{label}</span>
-        <Icon icon="mdi:chevron-down" className="w-3 h-3" />
+        <Icon icon="mdi:database" className="w-3 h-3 text-cyan-400 shrink-0" />
+        <span className="text-cyan-300 truncate min-w-0 flex-1">{label}</span>
+        <Icon icon="mdi:chevron-down" className="w-3 h-3 shrink-0" />
       </button>
 
       {/* Modal */}
@@ -165,7 +165,7 @@ export default function DatabaseSelector({ theme, activeProject, onSelect }: Pro
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className={`px-5 py-4 border-b-2 border-purple-900 ${headerBg} flex items-center justify-between`}>
+            <div className={`px-5 py-4 border-b-2 border-cyan-900 ${headerBg} flex items-center justify-between`}>
               <div>
                 <h2 className="text-sm font-black uppercase tracking-wider text-white">
                   Project Database
@@ -214,19 +214,19 @@ export default function DatabaseSelector({ theme, activeProject, onSelect }: Pro
                         className="flex items-center gap-3 flex-1 min-w-0 text-left"
                       >
                         {isActive
-                          ? <Icon icon="mdi:database-check" className="w-5 h-5 shrink-0 text-purple-400" />
+                          ? <Icon icon="mdi:database-check" className="w-5 h-5 shrink-0 text-cyan-400" />
                           : <Icon icon="mdi:database" className="w-5 h-5 shrink-0 text-white/30" />
                         }
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-sm font-black ${textMain}`}>{proj.name}</span>
+                            <span className={`text-sm font-black truncate ${textMain}`} title={proj.name}>{proj.name}</span>
                             {proj.is_default && (
-                              <span className="text-[9px] font-black uppercase bg-purple-600 text-white px-1.5 py-0.5 rounded leading-none">
+                              <span className="text-[9px] font-black uppercase bg-cyan-600 text-white px-1.5 py-0.5 rounded leading-none">
                                 default
                               </span>
                             )}
                             {isActive && (
-                              <span className="text-[9px] font-black uppercase bg-purple-500 text-white px-1.5 py-0.5 rounded leading-none">
+                              <span className="text-[9px] font-black uppercase bg-cyan-500 text-white px-1.5 py-0.5 rounded leading-none">
                                 active
                               </span>
                             )}
@@ -300,7 +300,7 @@ export default function DatabaseSelector({ theme, activeProject, onSelect }: Pro
                     <button
                       onClick={handleCreate}
                       disabled={creating}
-                      className="shrink-0 text-xs font-bold bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 disabled:opacity-40 transition-colors flex items-center gap-1"
+                      className="shrink-0 text-xs font-bold bg-cyan-600 text-white px-3 py-1.5 rounded hover:bg-cyan-700 disabled:opacity-40 transition-colors flex items-center gap-1"
                     >
                       {creating
                         ? <><Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" /> Creating…</>
