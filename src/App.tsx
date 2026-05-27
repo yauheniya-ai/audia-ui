@@ -6,6 +6,7 @@ import Main from "./components/Main";
 import PreviewPanel from "./components/PreviewPanel";
 
 export type Theme = "dark" | "light";
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface Paper {
   id: number;
@@ -41,7 +42,9 @@ export interface LivePreview {
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme: Theme = themeMode === 'system' ? (prefersDark ? 'dark' : 'light') : themeMode;
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [livePreviewPdf, setLivePreviewPdf] = useState<LivePreview | null>(null);
   const [activeAudio, setActiveAudio] = useState<AudioEntry | null>(null);
@@ -79,7 +82,8 @@ function App() {
     <div className={`flex flex-col h-screen overflow-hidden font-mono ${bg}`}>
       <Header
         theme={theme}
-        toggleTheme={() => setTheme(isDark ? "light" : "dark")}
+        themeMode={themeMode}
+        onChangeTheme={setThemeMode}
       />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
