@@ -3,10 +3,10 @@ import { Icon } from "@iconify/react";
 import type { FC } from "react";
 import type { Theme, ThemeMode } from "../App";
 
-const THEME_OPTIONS: { value: ThemeMode; icon: string; label: string; darkActiveClass: string; lightActiveClass: string; darkPillClass: string; lightPillClass: string }[] = [
-  { value: 'system', icon: 'solar:monitor-linear', label: 'System', darkActiveClass: 'text-white',     lightActiveClass: 'text-black',     darkPillClass: 'bg-black',   lightPillClass: 'bg-blue' },
-  { value: 'light',  icon: 'ph:sun-bold',          label: 'Light',  darkActiveClass: 'text-amber-400', lightActiveClass: 'text-amber-500', darkPillClass: 'bg-black',   lightPillClass: 'bg-cyan-200' },
-  { value: 'dark',   icon: 'ph:moon-bold',         label: 'Dark',   darkActiveClass: 'text-amber-400', lightActiveClass: 'text-black',     darkPillClass: 'bg-black',   lightPillClass: 'bg-blue' },
+const THEME_OPTIONS: { value: ThemeMode; icon: string; label: string; darkActiveClass: string; lightActiveClass: string }[] = [
+  { value: 'system', icon: 'solar:monitor-linear', label: 'System', darkActiveClass: 'text-white',     lightActiveClass: 'text-black' },
+  { value: 'light',  icon: 'ph:sun-bold',          label: 'Light',  darkActiveClass: 'text-red-500', lightActiveClass: 'text-red-500' },
+  { value: 'dark',   icon: 'ph:moon-bold',         label: 'Dark',   darkActiveClass: 'text-amber-400', lightActiveClass: 'text-amber-400' },
 ];
 
 interface ThemeToggleProps {
@@ -17,9 +17,8 @@ interface ThemeToggleProps {
 
 const ThemeToggle: FC<ThemeToggleProps> = ({ mode, onChange, isDark }) => {
   const idx = Math.max(0, THEME_OPTIONS.findIndex(o => o.value === mode));
-  const activeOpt = THEME_OPTIONS[idx];
   const containerBg = isDark ? 'bg-white/10 border border-white/20' : 'bg-black/5 border border-black/10';
-  const pillBg = isDark ? activeOpt.darkPillClass : activeOpt.lightPillClass;
+  const pillBg = isDark ? 'bg-black' : 'bg-blue';
   const inactiveText = isDark ? 'text-white/50 hover:text-white' : 'text-black/40 hover:text-black';
   return (
     <div className={`relative flex items-center ${containerBg} rounded-full p-0.5`}>
