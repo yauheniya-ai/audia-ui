@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: "../pypi/src/audia/ui/static",
+    outDir: "../audia/src/audia/ui/static",
     emptyOutDir: true,
   },
   server: {
